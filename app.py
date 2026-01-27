@@ -11,7 +11,8 @@ import io
 from modules.database import (
     add_student, get_all_students, get_student_by_id, delete_student,
     get_all_face_encodings, add_attendance, get_attendance_today,
-    get_attendance_history, check_already_attended_today, get_attendance_stats
+    get_attendance_history, check_already_attended_today, get_attendance_stats,
+    get_attendance_dates, get_attendance_stats_by_date
 )
 from modules.face_utils import (
     detect_faces, predict_gender, encode_face, find_best_match
@@ -46,8 +47,9 @@ def register_page():
 @app.route('/students')
 def students_page():
     """Trang danh sách sinh viên"""
-    students = get_all_students()
-    return render_template('students.html', students=students)
+    search = request.args.get('search', '').strip()
+    students = get_all_students(search=search if search else None)
+    return render_template('students.html', students=students, search=search)
 
 
 @app.route('/attendance')
@@ -59,8 +61,23 @@ def attendance_page():
 @app.route('/history')
 def history_page():
     """Trang lịch sử điểm danh"""
-    records = get_attendance_history(days=30)
-    return render_template('history.html', records=records)
+    search = request.args.get('search', '').strip()
+    date = request.args.get('date', '').strip()
+    
+    records = get_attendance_history(
+        days=30, 
+        search=search if search else None,
+        date=date if date else None
+    )
+    dates = get_attendance_dates()
+    stats = get_attendance_stats_by_date(date if date else None)
+    
+    return render_template('history.html', 
+                          records=records, 
+                          dates=dates,
+                          stats=stats,
+                          search=search, 
+                          selected_date=date)
 
 
 # ===============================

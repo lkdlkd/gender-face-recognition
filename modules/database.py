@@ -83,11 +83,23 @@ def add_student(student_code, name, class_name, gender, face_encoding, face_imag
         conn.close()
 
 
-def get_all_students():
-    """Lấy danh sách tất cả sinh viên"""
+def get_all_students(search=None):
+    """Lấy danh sách tất cả sinh viên với tùy chọn tìm kiếm"""
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM students ORDER BY created_at DESC')
+    
+    if search:
+        search_term = f'%{search}%'
+        cursor.execute('''
+            SELECT * FROM students 
+            WHERE student_code LIKE ? 
+               OR name LIKE ? 
+               OR class_name LIKE ?
+            ORDER BY created_at DESC
+        ''', (search_term, search_term, search_term))
+    else:
+        cursor.execute('SELECT * FROM students ORDER BY created_at DESC')
+    
     students = cursor.fetchall()
     conn.close()
     return students
@@ -182,20 +194,107 @@ def get_attendance_today():
     return records
 
 
-def get_attendance_history(days=7):
-    """Lấy lịch sử điểm danh trong N ngày gần nhất"""
+def get_attendance_history(days=7, search=None, date=None):
+    """Lấy lịch sử điểm danh với tùy chọn tìm kiếm và lọc theo ngày"""
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute('''
+    
+    base_query = '''
         SELECT a.*, s.student_code, s.name, s.class_name, s.gender as registered_gender
         FROM attendance a
         JOIN students s ON a.student_id = s.id
-        WHERE a.check_in_time >= datetime('now', ?)
-        ORDER BY a.check_in_time DESC
-    ''', (f'-{days} days',))
+    '''
+    
+    conditions = []
+    params = []
+    
+    # Lọc theo ngày cụ thể hoặc N ngày gần nhất
+    if date:
+        conditions.append("DATE(a.check_in_time) = ?")
+        params.append(date)
+    else:
+        conditions.append("a.check_in_time >= datetime('now', ?)")
+        params.append(f'-{days} days')
+    
+    # Tìm kiếm theo MSSV, tên, lớp
+    if search:
+        search_term = f'%{search}%'
+        conditions.append("(s.student_code LIKE ? OR s.name LIKE ? OR s.class_name LIKE ?)")
+        params.extend([search_term, search_term, search_term])
+    
+    query = base_query + ' WHERE ' + ' AND '.join(conditions) + ' ORDER BY a.check_in_time DESC'
+    cursor.execute(query, params)
     records = cursor.fetchall()
     conn.close()
     return records
+
+
+def get_attendance_dates():
+    """Lấy danh sách các ngày có điểm danh"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT DISTINCT DATE(check_in_time) as date 
+        FROM attendance 
+        ORDER BY date DESC
+        LIMIT 60
+    ''')
+    dates = [row['date'] for row in cursor.fetchall()]
+    conn.close()
+    return dates
+
+
+def get_attendance_stats_by_date(date=None):
+    """Thống kê điểm danh theo ngày"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    if not date:
+        date = datetime.now().strftime('%Y-%m-%d')
+    
+    # Tổng số sinh viên
+    cursor.execute('SELECT COUNT(*) as total FROM students')
+    total_students = cursor.fetchone()['total']
+    
+    # Số sinh viên điểm danh trong ngày
+    cursor.execute('''
+        SELECT COUNT(DISTINCT student_id) as attended 
+        FROM attendance 
+        WHERE DATE(check_in_time) = ?
+    ''', (date,))
+    attended = cursor.fetchone()['attended']
+    
+    # Thống kê theo trạng thái
+    cursor.execute('''
+        SELECT status, COUNT(*) as count 
+        FROM attendance 
+        WHERE DATE(check_in_time) = ?
+        GROUP BY status
+    ''', (date,))
+    status_stats = {row['status']: row['count'] for row in cursor.fetchall()}
+    
+    # Thống kê theo lớp
+    cursor.execute('''
+        SELECT s.class_name, COUNT(DISTINCT a.student_id) as count
+        FROM attendance a
+        JOIN students s ON a.student_id = s.id
+        WHERE DATE(a.check_in_time) = ?
+        GROUP BY s.class_name
+        ORDER BY count DESC
+    ''', (date,))
+    class_stats = {row['class_name']: row['count'] for row in cursor.fetchall()}
+    
+    conn.close()
+    
+    return {
+        'date': date,
+        'total_students': total_students,
+        'attended': attended,
+        'absent': total_students - attended,
+        'attendance_rate': round(attended / total_students * 100, 1) if total_students > 0 else 0,
+        'status_stats': status_stats,
+        'class_stats': class_stats
+    }
 
 
 def check_already_attended_today(student_id):

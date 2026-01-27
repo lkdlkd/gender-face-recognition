@@ -6,9 +6,31 @@
 
 {% block content %}
 <div class="students-page">
+    <!-- Search Section -->
+    <div class="filter-section card">
+        <form method="GET" action="/students" class="filter-form">
+            <div class="filter-row">
+                <div class="filter-group flex-grow">
+                    <label for="search"><i class="fas fa-search"></i> Tìm kiếm sinh viên</label>
+                    <input type="text" name="search" id="search" class="form-control" 
+                           placeholder="Nhập MSSV, họ tên hoặc lớp..." value="{{ search }}">
+                </div>
+                <div class="filter-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i> Tìm
+                    </button>
+                    <a href="/students" class="btn btn-secondary">
+                        <i class="fas fa-redo"></i> Reset
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+
     <div class="page-header">
         <div class="header-info">
-            <p>Tổng số: <strong>{{ students|length }}</strong> sinh viên</p>
+            <p>Tổng số: <strong>{{ students|length }}</strong> sinh viên
+            {% if search %} - Tìm: "{{ search }}"{% endif %}</p>
         </div>
         <div class="header-actions">
             <a href="{{ url_for('register_page') }}" class="btn btn-primary">

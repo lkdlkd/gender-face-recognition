@@ -6,9 +6,85 @@
 
 {% block content %}
 <div class="history-page">
+    <!-- Search and Filter Section -->
+    <div class="filter-section card">
+        <form method="GET" action="/history" class="filter-form">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label for="date"><i class="fas fa-calendar"></i> Ngày</label>
+                    <select name="date" id="date" class="form-control">
+                        <option value="">Tất cả (30 ngày)</option>
+                        {% for d in dates %}
+                        <option value="{{ d }}" {{ 'selected' if d == selected_date else '' }}>{{ d }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-group flex-grow">
+                    <label for="search"><i class="fas fa-search"></i> Tìm kiếm</label>
+                    <input type="text" name="search" id="search" class="form-control" 
+                           placeholder="Nhập MSSV, họ tên hoặc lớp..." value="{{ search }}">
+                </div>
+                <div class="filter-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i> Tìm
+                    </button>
+                    <a href="/history" class="btn btn-secondary">
+                        <i class="fas fa-redo"></i> Reset
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Statistics Section -->
+    <div class="stats-section">
+        <div class="stat-card card">
+            <div class="stat-icon blue"><i class="fas fa-users"></i></div>
+            <div class="stat-info">
+                <span class="stat-value">{{ stats.attended }}</span>
+                <span class="stat-label">Đã điểm danh</span>
+            </div>
+        </div>
+        <div class="stat-card card">
+            <div class="stat-icon red"><i class="fas fa-user-times"></i></div>
+            <div class="stat-info">
+                <span class="stat-value">{{ stats.absent }}</span>
+                <span class="stat-label">Vắng mặt</span>
+            </div>
+        </div>
+        <div class="stat-card card">
+            <div class="stat-icon green"><i class="fas fa-percentage"></i></div>
+            <div class="stat-info">
+                <span class="stat-value">{{ stats.attendance_rate }}%</span>
+                <span class="stat-label">Tỷ lệ</span>
+            </div>
+        </div>
+        <div class="stat-card card">
+            <div class="stat-icon purple"><i class="fas fa-calendar-day"></i></div>
+            <div class="stat-info">
+                <span class="stat-value">{{ stats.date }}</span>
+                <span class="stat-label">Ngày thống kê</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Class Stats -->
+    {% if stats.class_stats %}
+    <div class="class-stats card">
+        <h4><i class="fas fa-chart-bar"></i> Thống kê theo lớp</h4>
+        <div class="class-tags">
+            {% for class_name, count in stats.class_stats.items() %}
+            <span class="class-tag">{{ class_name }}: <strong>{{ count }}</strong></span>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
     <div class="page-header">
         <div class="header-info">
-            <p>Hiển thị <strong>{{ records|length }}</strong> bản ghi trong 30 ngày gần nhất</p>
+            <p>Hiển thị <strong>{{ records|length }}</strong> bản ghi 
+            {% if selected_date %}ngày {{ selected_date }}{% else %}trong 30 ngày gần nhất{% endif %}
+            {% if search %} - Tìm: "{{ search }}"{% endif %}</p>
         </div>
         <div class="header-actions">
             <a href="/api/export/csv" class="btn btn-success">
