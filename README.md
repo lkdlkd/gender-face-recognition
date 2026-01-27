@@ -1,151 +1,201 @@
-# Face Recognition System with Gender & Emotion Detection
+# 🥉 HỆ THỐNG ĐIỂM DANH SINH VIÊN BẰNG NHẬN DIỆN KHUÔN MẶT + GIỚI TÍNH
 
-Hệ thống nhận diện khuôn mặt sử dụng OpenCV, MediaPipe và Deep Learning với khả năng phát hiện giới tính và cảm xúc.
+## 📌 Tên đề tài
+**Xây dựng hệ thống điểm danh sinh viên bằng nhận diện khuôn mặt kết hợp phân tích giới tính**
 
-## 📋 Mô tả
+Hệ thống web điểm danh tự động, gắn liền với thực tế trường học.
 
-Ứng dụng AI phân tích khuôn mặt với các tính năng:
+---
 
-**Tính năng chính:**
-- ✅ **Face Localization** - Phát hiện vị trí khuôn mặt (Haar Cascade)
-- ✅ **Shape Features** - Trích xuất đặc trưng hình dạng (HOG)
-- ✅ **Geometric Features** - Trích xuất 468 điểm đặc trưng hình học (MediaPipe Face Mesh)
-- ✅ **Gender Classification** - Nhận diện giới tính (CNN - Caffe Model)
-- ✅ **Emotion Recognition** - Nhận diện 7 cảm xúc cơ bản (CNN - FER-2013)
-- ✅ Hỗ trợ cả ảnh tĩnh và webcam realtime
-- ✅ Lưu kết quả phân tích
+## 🎯 Tính năng chính
 
-## 🎯 Phương pháp sử dụng
+### 🎓 Quản lý sinh viên
+- ✅ Đăng ký sinh viên mới (MSSV, họ tên, lớp)
+- ✅ Chụp và lưu ảnh khuôn mặt
+- ✅ Tự động xác định giới tính bằng AI
+- ✅ Xem danh sách sinh viên
+- ✅ Xóa sinh viên
 
-### 1. Phát hiện vị trí khuôn mặt (Face Localization)
-- **Phương pháp:** Haar Cascade Classifier
-- **File:** `face_localization.py`
-- **Mô tả:** Phát hiện bounding box (x, y, w, h) của khuôn mặt trong ảnh
+### 📸 Điểm danh realtime
+- ✅ Camera webcam realtime
+- ✅ Phát hiện khuôn mặt (Face Detection)
+- ✅ Nhận diện sinh viên (Face Recognition)
+- ✅ Phân tích giới tính (Gender Classification)
+- ✅ Phân tích cảm xúc (Emotion Recognition)
+- ✅ Chế độ tự động điểm danh
 
-### 2. Trích xuất đặc trưng hình dạng (Shape Features)
-- **Phương pháp:** HOG (Histogram of Oriented Gradients)
-- **File:** `shape_features.py`
-- **Mô tả:** Phân tích gradient và hình dạng cục bộ của khuôn mặt
-- **Ứng dụng:** Nhận dạng khuôn mặt, phát hiện vật thể
+### 📊 Báo cáo
+- ✅ Lịch sử điểm danh
+- ✅ Thống kê theo ngày/tuần
+- ✅ Thống kê theo giới tính
+- ✅ Xuất báo cáo CSV
 
-### 3. Trích xuất đặc trưng hình học (Geometric Features)
-- **Phương pháp:** MediaPipe Face Mesh
-- **File:** `geometric_features.py`
-- **Mô tả:** Phát hiện 468 điểm landmark trên khuôn mặt (mắt, mũi, miệng, hàm)
-- **Ứng dụng:** 
-  - Tính khoảng cách và tỷ lệ giữa các bộ phận khuôn mặt
-  - Phân tích cảm xúc
-  - Đo độ đối xứng khuôn mặt
-  - Nhận dạng sinh trắc học
+---
 
-### 4. Phân loại giới tính (Gender Classification)
-- **Phương pháp:** CNN (Convolutional Neural Network)
-- **Model:** Caffe Model
-- **File:** `gender_classification.py`
-- **Output:** Male (Nam) / Female (Nữ)
+## ⚙️ Công nghệ sử dụng
 
-### 5. Nhận dạng cảm xúc (Emotion Recognition)
-- **Phương pháp:** CNN (Mini-Xception Architecture)
-- **Dataset:** FER-2013 (35,887 ảnh khuôn mặt)
-- **File:** `emotion_recognition.py`
-- **Output:** 7 cảm xúc cơ bản
-  - 😠 Angry (Tức giận)
-  - 🤢 Disgust (Ghê tởm)
-  - 😨 Fear (Sợ hãi)
-  - 😊 Happy (Vui vẻ)
-  - 😢 Sad (Buồn bã)
-  - 😲 Surprise (Ngạc nhiên)
-  - 😐 Neutral (Bình thường)
+| Thành phần | Công nghệ |
+|------------|-----------|
+| Backend | Python Flask |
+| AI/ML | OpenCV DNN, TensorFlow/Keras |
+| Face Detection | Haar Cascade |
+| Gender Model | CNN (Caffe) |
+| Emotion Model | Mini-Xception (FER-2013) |
+| Database | SQLite |
+| Frontend | HTML, CSS, JavaScript |
+| Camera | WebRTC API |
+
+---
 
 ## 🛠️ Cài đặt
 
 ### 1. Yêu cầu hệ thống
-- Python 3.11+
-- Webcam (cho chế độ realtime)
-- RAM: >= 4GB
-- GPU: Không bắt buộc (CPU đủ nhanh)
+- Python 3.8+
+- Webcam
+- RAM >= 4GB
 
 ### 2. Cài đặt thư viện
 
 ```bash
-pip install opencv-python numpy tensorflow mediapipe
+pip install -r requirements.txt
 ```
 
-### 3. Tải models
+### 3. Cấu trúc thư mục
 
-**Tạo thư mục `models/` và tải các file sau:**
-
-#### Gender Model (Caffe)
-1. **gender_deploy.prototxt** - [Download](https://github.com/smahesh29/Gender-and-Age-Detection/blob/master/gender_deploy.prototxt)
-2. **gender_net.caffemodel** - [Download](https://github.com/GilLevi/AgeGenderDeepLearning/raw/master/models/gender_net.caffemodel)
-
-#### Emotion Model (TensorFlow/Keras)
-3. **fer2013_mini_XCEPTION.102-0.66.hdf5** - [Download](https://github.com/oarriaga/face_classification/blob/master/trained_models/emotion_models/fer2013_mini_XCEPTION.102-0.66.hdf5)
-
-#### Face Detection Model (Haar Cascade)
-4. **haarcascade_frontalface_default.xml** - Tự động có sẵn trong OpenCV
-
-**Cấu trúc thư mục:**
 ```
-face_recognition/
-├── main.py
-├── face_localization.py
-├── shape_features.py
-├── geometric_features.py
-├── gender_classification.py
-├── emotion_recognition.py
-├── models/
+gender-face-recognition/
+├── app.py                      # Flask application
+├── requirements.txt            # Dependencies
+├── database.db                 # SQLite database (auto-created)
+│
+├── modules/                    # Backend modules
+│   ├── __init__.py
+│   ├── database.py             # Database CRUD
+│   ├── face_utils.py           # Face detection & recognition
+│   └── emotion_utils.py        # Emotion recognition
+│
+├── models/                     # AI Models
 │   ├── haarcascade_frontalface_default.xml
 │   ├── gender_deploy.prototxt
 │   ├── gender_net.caffemodel
 │   └── fer2013_mini_XCEPTION.102-0.66.hdf5
-├── test.jpg (ảnh test, không bắt buộc)
-└── README.md
+│
+├── static/
+│   ├── css/style.css           # Styles
+│   └── uploads/faces/          # Uploaded face images
+│
+└── templates/                  # HTML templates
+    ├── base.html
+    ├── index.html              # Dashboard
+    ├── register.html           # Đăng ký sinh viên
+    ├── attendance.html         # Điểm danh
+    ├── students.html           # Danh sách SV
+    └── history.html            # Lịch sử
 ```
+
+---
 
 ## 🚀 Sử dụng
 
 ### Chạy chương trình
 
 ```bash
-python main.py
+python app.py
 ```
 
-### Menu lựa chọn
+### Truy cập website
+
+Mở trình duyệt tại: **http://localhost:5000**
+
+### Hướng dẫn sử dụng
+
+#### 1️⃣ Đăng ký sinh viên
+1. Vào menu "Đăng ký SV"
+2. Nhập MSSV, họ tên, lớp
+3. Bật camera và chụp ảnh khuôn mặt
+4. Hệ thống tự động xác định giới tính
+5. Nhấn "Đăng ký"
+
+#### 2️⃣ Điểm danh
+1. Vào menu "Điểm danh"
+2. Bật camera
+3. Nhấn "Điểm danh" hoặc bật chế độ tự động
+4. Hệ thống nhận diện và ghi điểm danh
+
+#### 3️⃣ Xem lịch sử
+1. Vào menu "Lịch sử"
+2. Xem danh sách điểm danh
+3. Xuất CSV nếu cần
+
+---
+
+## 📊 Kết quả hiển thị
+
+### Trên camera:
+- 📦 Bounding box quanh khuôn mặt
+- 🏷️ Tên sinh viên (hoặc "Unknown")
+- ♂️♀️ Giới tính
+- 😊 Cảm xúc
+
+### Thông tin điểm danh:
+- MSSV, họ tên, lớp
+- Thời gian điểm danh
+- Giới tính đăng ký vs phát hiện
+- Cảm xúc
+- Trạng thái (Có mặt / Muộn)
+
+---
+
+## 🧪 Quy trình hoạt động
 
 ```
-=== CHỌN CHẾ ĐỘ ===
-1. Nhận diện từ ảnh
-2. Nhận diện từ webcam
+1️⃣ ĐĂNG KÝ
+   └─> Nhập thông tin
+   └─> Chụp ảnh
+   └─> AI xác định giới tính
+   └─> Lưu face encoding vào DB
+
+2️⃣ ĐIỂM DANH
+   └─> Mở camera
+   └─> Detect khuôn mặt
+   └─> So khớp với DB
+   └─> Nhận diện giới tính + cảm xúc
+   └─> Ghi điểm danh
+
+3️⃣ BÁO CÁO
+   └─> Thống kê %
+   └─> Xuất CSV
 ```
 
-### Chế độ 1: Nhận diện từ ảnh
+---
 
-```bash
-Nhập đường dẫn ảnh (Enter = test.jpg): path/to/image.jpg
-```
+## 📚 Phương pháp AI
 
-**Phím tắt:**
-- `s` - Lưu ảnh kết quả
-- Phím bất kỳ - Thoát
+### 1. Face Detection
+- **Phương pháp:** Haar Cascade Classifier
+- **Mô tả:** Phát hiện vị trí khuôn mặt trong ảnh
 
-### Chế độ 2: Nhận diện từ webcam
+### 2. Face Recognition
+- **Phương pháp:** Histogram flattening + Cosine similarity
+- **Mô tả:** So khớp face encoding với database
 
-**Phím tắt:**
-- `q` - Thoát webcam
+### 3. Gender Classification
+- **Phương pháp:** CNN (Caffe Model)
+- **Output:** Nam / Nữ
 
-## 📊 Kết quả
+### 4. Emotion Recognition
+- **Phương pháp:** Mini-Xception CNN
+- **Dataset:** FER-2013
+- **Output:** 7 cảm xúc (Vui vẻ, Buồn bã, Tức giận, Sợ hãi, Ngạc nhiên, Ghê tởm, Bình thường)
 
-### Hiển thị trên ảnh:
-- **Bounding box** màu xanh dương quanh khuôn mặt
-- **Label** hiển thị: `Gender | Emotion`
-  - Ví dụ: `Male | Happy`, `Female | Neutral`
-- **Facial landmarks** (468 điểm màu xanh lá)
-- **HOG features** (cửa sổ riêng)
+---
 
-### Ví dụ output:
-```
-Male | Happy
-Female | Sad
-Male | Neutral
-```
+## 👨‍💻 Tác giả
+
+Đề tài môn học: **Xử lý ảnh**
+
+---
+
+## 📝 License
+
+MIT License

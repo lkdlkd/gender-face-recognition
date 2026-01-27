@@ -1,0 +1,232 @@
+{% extends 'base.html' %}
+
+{% block title %}Đăng ký sinh viên - Điểm Danh{% endblock %}
+
+{% block page_title %}📝 Đăng ký sinh viên mới{% endblock %}
+
+{% block content %}
+<div class="register-page">
+    <div class="register-container">
+        <!-- Form Section -->
+        <div class="form-section card">
+            <h3><i class="fas fa-user-plus"></i> Thông tin sinh viên</h3>
+
+            <form id="registerForm">
+                <div class="form-group">
+                    <label for="studentCode">
+                        <i class="fas fa-id-card"></i> Mã sinh viên (MSSV)
+                    </label>
+                    <input type="text" id="studentCode" name="student_code" placeholder="VD: SV001" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="studentName">
+                        <i class="fas fa-user"></i> Họ và tên
+                    </label>
+                    <input type="text" id="studentName" name="name" placeholder="VD: Nguyễn Văn A" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="className">
+                        <i class="fas fa-graduation-cap"></i> Lớp
+                    </label>
+                    <input type="text" id="className" name="class_name" placeholder="VD: CNTT-K45" required>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <i class="fas fa-venus-mars"></i> Giới tính (tự động xác định)
+                    </label>
+                    <input type="text" id="detectedGender" readonly placeholder="Sẽ tự động xác định khi chụp ảnh">
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block" id="submitBtn" disabled>
+                    <i class="fas fa-save"></i> Đăng ký sinh viên
+                </button>
+            </form>
+
+            <div id="resultMessage" class="result-message hidden"></div>
+        </div>
+
+        <!-- Camera Section -->
+        <div class="camera-section card">
+            <h3><i class="fas fa-camera"></i> Chụp ảnh khuôn mặt</h3>
+
+            <div class="camera-wrapper">
+                <video id="videoElement" autoplay playsinline></video>
+                <canvas id="canvasElement" style="display: none;"></canvas>
+                <div class="camera-overlay" id="cameraOverlay">
+                    <i class="fas fa-camera"></i>
+                    <p>Click để bật camera</p>
+                </div>
+            </div>
+
+            <div class="camera-controls">
+                <button type="button" class="btn btn-info" id="startCameraBtn">
+                    <i class="fas fa-video"></i> Bật Camera
+                </button>
+                <button type="button" class="btn btn-success" id="captureBtn" disabled>
+                    <i class="fas fa-camera"></i> Chụp ảnh
+                </button>
+                <button type="button" class="btn btn-warning" id="retakeBtn" style="display: none;">
+                    <i class="fas fa-redo"></i> Chụp lại
+                </button>
+            </div>
+
+            <!-- Captured Image Preview -->
+            <div id="capturedPreview" class="captured-preview hidden">
+                <h4><i class="fas fa-check-circle"></i> Ảnh đã chụp</h4>
+                <img id="capturedImage" alt="Captured face">
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const video = document.getElementById('videoElement');
+    const canvas = document.getElementById('canvasElement');
+    const cameraOverlay = document.getElementById('cameraOverlay');
+    const startCameraBtn = document.getElementById('startCameraBtn');
+    const captureBtn = document.getElementById('captureBtn');
+    const retakeBtn = document.getElementById('retakeBtn');
+    const submitBtn = document.getElementById('submitBtn');
+    const capturedPreview = document.getElementById('capturedPreview');
+    const capturedImage = document.getElementById('capturedImage');
+    const detectedGender = document.getElementById('detectedGender');
+    const resultMessage = document.getElementById('resultMessage');
+
+    let stream = null;
+    let capturedData = null;
+
+    // Start camera
+    startCameraBtn.addEventListener('click', async () => {
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    width: 640,
+                    height: 480,
+                    facingMode: 'user'
+                }
+            });
+            video.srcObject = stream;
+            cameraOverlay.style.display = 'none';
+            video.style.display = 'block';
+            startCameraBtn.disabled = true;
+            captureBtn.disabled = false;
+        } catch (err) {
+            alert('Không thể truy cập camera: ' + err.message);
+        }
+    });
+
+    // Capture photo
+    captureBtn.addEventListener('click', () => {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+
+        capturedData = canvas.toDataURL('image/jpeg', 0.9);
+        capturedImage.src = capturedData;
+        capturedPreview.classList.remove('hidden');
+
+        captureBtn.style.display = 'none';
+        retakeBtn.style.display = 'inline-block';
+        submitBtn.disabled = false;
+
+        // Stop video display
+        video.style.display = 'none';
+        cameraOverlay.innerHTML = '<i class="fas fa-check"></i><p>Đã chụp ảnh</p>';
+        cameraOverlay.style.display = 'flex';
+        cameraOverlay.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+    });
+
+    // Retake photo
+    retakeBtn.addEventListener('click', () => {
+        capturedData = null;
+        capturedPreview.classList.add('hidden');
+        captureBtn.style.display = 'inline-block';
+        retakeBtn.style.display = 'none';
+        submitBtn.disabled = true;
+        detectedGender.value = '';
+
+        video.style.display = 'block';
+        cameraOverlay.style.display = 'none';
+    });
+
+    // Submit form
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        if (!capturedData) {
+            showMessage('Vui lòng chụp ảnh khuôn mặt', 'error');
+            return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
+
+        try {
+            const response = await fetch('/api/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    student_code: document.getElementById('studentCode').value,
+                    name: document.getElementById('studentName').value,
+                    class_name: document.getElementById('className').value,
+                    image: capturedData
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showMessage(data.message, 'success');
+                detectedGender.value = data.gender;
+
+                // Reset form after 2 seconds
+                setTimeout(() => {
+                    document.getElementById('registerForm').reset();
+                    capturedData = null;
+                    capturedPreview.classList.add('hidden');
+                    captureBtn.style.display = 'inline-block';
+                    retakeBtn.style.display = 'none';
+                    submitBtn.disabled = true;
+                    detectedGender.value = '';
+
+                    if (stream) {
+                        video.style.display = 'block';
+                        cameraOverlay.style.display = 'none';
+                        cameraOverlay.innerHTML = '<i class="fas fa-camera"></i><p>Click để bật camera</p>';
+                        cameraOverlay.style.background = '';
+                    }
+                }, 2000);
+            } else {
+                showMessage(data.message, 'error');
+            }
+        } catch (err) {
+            showMessage('Lỗi kết nối: ' + err.message, 'error');
+        }
+
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-save"></i> Đăng ký sinh viên';
+    });
+
+    function showMessage(message, type) {
+        resultMessage.textContent = message;
+        resultMessage.className = 'result-message ' + type;
+        resultMessage.classList.remove('hidden');
+
+        setTimeout(() => {
+            resultMessage.classList.add('hidden');
+        }, 5000);
+    }
+
+    // Cleanup on page leave
+    window.addEventListener('beforeunload', () => {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+    });
+</script>
+{% endblock %}

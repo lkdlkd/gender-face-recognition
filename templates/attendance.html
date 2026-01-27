@@ -1,0 +1,311 @@
+{% extends 'base.html' %}
+
+{% block title %}Điểm danh - Điểm Danh Sinh Viên{% endblock %}
+
+{% block page_title %}📸 Điểm danh bằng khuôn mặt{% endblock %}
+
+{% block content %}
+<div class="attendance-page">
+    <div class="attendance-container">
+        <!-- Camera Section -->
+        <div class="camera-section card">
+            <h3><i class="fas fa-video"></i> Camera điểm danh</h3>
+
+            <div class="camera-wrapper large">
+                <video id="videoElement" autoplay playsinline></video>
+                <canvas id="overlayCanvas"></canvas>
+                <div class="camera-overlay" id="cameraOverlay">
+                    <i class="fas fa-camera"></i>
+                    <p>Click "Bật Camera" để bắt đầu</p>
+                </div>
+            </div>
+
+            <div class="camera-controls">
+                <button type="button" class="btn btn-info" id="startCameraBtn">
+                    <i class="fas fa-video"></i> Bật Camera
+                </button>
+                <button type="button" class="btn btn-success btn-lg" id="recognizeBtn" disabled>
+                    <i class="fas fa-search"></i> Điểm danh
+                </button>
+                <button type="button" class="btn btn-secondary" id="stopCameraBtn" disabled>
+                    <i class="fas fa-stop"></i> Dừng Camera
+                </button>
+            </div>
+
+            <div class="auto-mode">
+                <label class="toggle-switch">
+                    <input type="checkbox" id="autoModeToggle">
+                    <span class="slider"></span>
+                </label>
+                <span>Tự động điểm danh (mỗi 3 giây)</span>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="results-section card">
+            <h3><i class="fas fa-clipboard-check"></i> Kết quả điểm danh</h3>
+
+            <div id="recognitionResult" class="recognition-result">
+                <div class="placeholder">
+                    <i class="fas fa-user-circle"></i>
+                    <p>Chưa có kết quả điểm danh</p>
+                </div>
+            </div>
+
+            <!-- Today's Attendance List -->
+            <div class="today-attendance">
+                <h4><i class="fas fa-calendar-day"></i> Đã điểm danh hôm nay</h4>
+                <div id="todayList" class="attendance-list">
+                    <p class="loading"><i class="fas fa-spinner fa-spin"></i> Đang tải...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const video = document.getElementById('videoElement');
+    const overlayCanvas = document.getElementById('overlayCanvas');
+    const ctx = overlayCanvas.getContext('2d');
+    const cameraOverlay = document.getElementById('cameraOverlay');
+    const startCameraBtn = document.getElementById('startCameraBtn');
+    const stopCameraBtn = document.getElementById('stopCameraBtn');
+    const recognizeBtn = document.getElementById('recognizeBtn');
+    const autoModeToggle = document.getElementById('autoModeToggle');
+    const recognitionResult = document.getElementById('recognitionResult');
+    const todayList = document.getElementById('todayList');
+
+    let stream = null;
+    let autoInterval = null;
+
+    // Start camera
+    startCameraBtn.addEventListener('click', async () => {
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    width: 640,
+                    height: 480,
+                    facingMode: 'user'
+                }
+            });
+            video.srcObject = stream;
+
+            video.onloadedmetadata = () => {
+                overlayCanvas.width = video.videoWidth;
+                overlayCanvas.height = video.videoHeight;
+            };
+
+            cameraOverlay.style.display = 'none';
+            video.style.display = 'block';
+            overlayCanvas.style.display = 'block';
+
+            startCameraBtn.disabled = true;
+            stopCameraBtn.disabled = false;
+            recognizeBtn.disabled = false;
+        } catch (err) {
+            alert('Không thể truy cập camera: ' + err.message);
+        }
+    });
+
+    // Stop camera
+    stopCameraBtn.addEventListener('click', () => {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            stream = null;
+        }
+
+        video.style.display = 'none';
+        overlayCanvas.style.display = 'none';
+        cameraOverlay.style.display = 'flex';
+
+        startCameraBtn.disabled = false;
+        stopCameraBtn.disabled = true;
+        recognizeBtn.disabled = true;
+
+        if (autoInterval) {
+            clearInterval(autoInterval);
+            autoInterval = null;
+            autoModeToggle.checked = false;
+        }
+    });
+
+    // Recognize face
+    async function recognizeFace() {
+        if (!stream) return;
+
+        recognizeBtn.disabled = true;
+        recognizeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
+
+        // Capture frame
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        const imageData = canvas.toDataURL('image/jpeg', 0.9);
+
+        try {
+            const response = await fetch('/api/recognize', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: imageData })
+            });
+
+            const data = await response.json();
+
+            // Clear overlay
+            ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+            if (data.success && data.faces.length > 0) {
+                displayResults(data.faces);
+                drawFaceBoxes(data.faces);
+                loadTodayAttendance();
+            } else {
+                recognitionResult.innerHTML = `
+                    <div class="result-card error">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <p>${data.message || 'Không phát hiện khuôn mặt'}</p>
+                    </div>
+                `;
+            }
+        } catch (err) {
+            recognitionResult.innerHTML = `
+                <div class="result-card error">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>Lỗi: ${err.message}</p>
+                </div>
+            `;
+        }
+
+        recognizeBtn.disabled = false;
+        recognizeBtn.innerHTML = '<i class="fas fa-search"></i> Điểm danh';
+    }
+
+    recognizeBtn.addEventListener('click', recognizeFace);
+
+    // Display recognition results
+    function displayResults(faces) {
+        let html = '';
+
+        faces.forEach(face => {
+            if (face.found) {
+                const statusClass = face.already_attended ? 'warning' : 'success';
+                const statusIcon = face.already_attended ? 'info-circle' : 'check-circle';
+
+                html += `
+                    <div class="result-card ${statusClass}">
+                        <div class="result-header">
+                            <i class="fas fa-${statusIcon}"></i>
+                            <span class="status-badge">${face.status}</span>
+                        </div>
+                        <div class="result-body">
+                            <h4>${face.name}</h4>
+                            <p><i class="fas fa-id-card"></i> ${face.student_code}</p>
+                            <p><i class="fas fa-graduation-cap"></i> ${face.class_name}</p>
+                            <p><i class="fas fa-venus-mars"></i> ${face.gender}</p>
+                            <p><i class="fas fa-face-smile"></i> ${face.emotion}</p>
+                            <p><i class="fas fa-percentage"></i> Độ tin cậy: ${face.confidence}%</p>
+                        </div>
+                    </div>
+                `;
+            } else {
+                html += `
+                    <div class="result-card unknown">
+                        <div class="result-header">
+                            <i class="fas fa-question-circle"></i>
+                            <span class="status-badge">Không nhận diện được</span>
+                        </div>
+                        <div class="result-body">
+                            <h4>Sinh viên không xác định</h4>
+                            <p><i class="fas fa-venus-mars"></i> ${face.gender}</p>
+                            <p><i class="fas fa-face-smile"></i> ${face.emotion}</p>
+                        </div>
+                    </div>
+                `;
+            }
+        });
+
+        recognitionResult.innerHTML = html;
+    }
+
+    // Draw face boxes on overlay
+    function drawFaceBoxes(faces) {
+        faces.forEach(face => {
+            const bbox = face.bbox;
+
+            // Draw rectangle
+            ctx.strokeStyle = face.found ? '#10b981' : '#ef4444';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(bbox.x, bbox.y, bbox.w, bbox.h);
+
+            // Draw label background
+            const label = face.found ? face.name : 'Unknown';
+            ctx.font = 'bold 16px Inter';
+            const textWidth = ctx.measureText(label).width;
+
+            ctx.fillStyle = face.found ? '#10b981' : '#ef4444';
+            ctx.fillRect(bbox.x, bbox.y - 25, textWidth + 10, 25);
+
+            // Draw label text
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(label, bbox.x + 5, bbox.y - 7);
+        });
+    }
+
+    // Auto mode toggle
+    autoModeToggle.addEventListener('change', () => {
+        if (autoModeToggle.checked) {
+            autoInterval = setInterval(recognizeFace, 3000);
+        } else {
+            if (autoInterval) {
+                clearInterval(autoInterval);
+                autoInterval = null;
+            }
+        }
+    });
+
+    // Load today's attendance
+    async function loadTodayAttendance() {
+        try {
+            const response = await fetch('/api/attendance/today');
+            const data = await response.json();
+
+            if (data.success && data.records.length > 0) {
+                let html = '<ul>';
+                data.records.slice(0, 10).forEach(record => {
+                    html += `
+                        <li>
+                            <span class="student-info">
+                                <strong>${record.name}</strong> (${record.student_code})
+                            </span>
+                            <span class="check-time">
+                                ${new Date(record.check_in_time).toLocaleTimeString('vi-VN')}
+                            </span>
+                        </li>
+                    `;
+                });
+                html += '</ul>';
+                todayList.innerHTML = html;
+            } else {
+                todayList.innerHTML = '<p class="empty">Chưa có ai điểm danh hôm nay</p>';
+            }
+        } catch (err) {
+            todayList.innerHTML = '<p class="error">Lỗi tải dữ liệu</p>';
+        }
+    }
+
+    // Load initial data
+    loadTodayAttendance();
+
+    // Cleanup
+    window.addEventListener('beforeunload', () => {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+        if (autoInterval) {
+            clearInterval(autoInterval);
+        }
+    });
+</script>
+{% endblock %}

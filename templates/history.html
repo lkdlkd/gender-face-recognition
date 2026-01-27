@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+
+{% block title %}Lịch sử điểm danh - Điểm Danh{% endblock %}
+
+{% block page_title %}📋 Lịch sử điểm danh{% endblock %}
+
+{% block content %}
+<div class="history-page">
+    <div class="page-header">
+        <div class="header-info">
+            <p>Hiển thị <strong>{{ records|length }}</strong> bản ghi trong 30 ngày gần nhất</p>
+        </div>
+        <div class="header-actions">
+            <a href="/api/export/csv" class="btn btn-success">
+                <i class="fas fa-file-csv"></i> Xuất CSV
+            </a>
+        </div>
+    </div>
+
+    {% if records %}
+    <div class="table-container card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>MSSV</th>
+                    <th>Họ tên</th>
+                    <th>Lớp</th>
+                    <th>Thời gian</th>
+                    <th>Giới tính (đăng ký)</th>
+                    <th>Giới tính (phát hiện)</th>
+                    <th>Cảm xúc</th>
+                    <th>Trạng thái</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in records %}
+                <tr>
+                    <td><strong>{{ record.student_code }}</strong></td>
+                    <td>{{ record.name }}</td>
+                    <td>{{ record.class_name }}</td>
+                    <td>{{ record.check_in_time }}</td>
+                    <td>
+                        <span class="gender-badge {{ 'male' if record.registered_gender == 'Nam' else 'female' }}">
+                            {{ record.registered_gender }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="gender-badge {{ 'male' if record.gender_detected == 'Nam' else 'female' }}">
+                            {{ record.gender_detected }}
+                        </span>
+                        {% if record.registered_gender != record.gender_detected %}
+                        <i class="fas fa-exclamation-triangle warning-icon" title="Không khớp giới tính đăng ký"></i>
+                        {% endif %}
+                    </td>
+                    <td>{{ record.emotion_detected or 'N/A' }}</td>
+                    <td>
+                        <span class="status-badge {{ record.status }}">
+                            {% if record.status == 'present' %}
+                            <i class="fas fa-check-circle"></i> Có mặt
+                            {% elif record.status == 'late' %}
+                            <i class="fas fa-clock"></i> Muộn
+                            {% else %}
+                            <i class="fas fa-times-circle"></i> {{ record.status }}
+                            {% endif %}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state card">
+        <i class="fas fa-clipboard-list"></i>
+        <h3>Chưa có lịch sử điểm danh</h3>
+        <p>Bắt đầu điểm danh để xem lịch sử tại đây</p>
+        <a href="{{ url_for('attendance_page') }}" class="btn btn-primary">
+            <i class="fas fa-camera"></i> Điểm danh ngay
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

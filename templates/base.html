@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Điểm Danh Sinh Viên{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-user-check"></i>
+                    <span>Điểm Danh AI</span>
+                </div>
+            </div>
+            
+            <ul class="nav-menu">
+                <li class="nav-item {% if request.endpoint == 'index' %}active{% endif %}">
+                    <a href="{{ url_for('index') }}" class="nav-link">
+                        <i class="fas fa-home"></i>
+                        <span>Trang chủ</span>
+                    </a>
+                </li>
+                <li class="nav-item {% if request.endpoint == 'register_page' %}active{% endif %}">
+                    <a href="{{ url_for('register_page') }}" class="nav-link">
+                        <i class="fas fa-user-plus"></i>
+                        <span>Đăng ký SV</span>
+                    </a>
+                </li>
+                <li class="nav-item {% if request.endpoint == 'attendance_page' %}active{% endif %}">
+                    <a href="{{ url_for('attendance_page') }}" class="nav-link">
+                        <i class="fas fa-camera"></i>
+                        <span>Điểm danh</span>
+                    </a>
+                </li>
+                <li class="nav-item {% if request.endpoint == 'students_page' %}active{% endif %}">
+                    <a href="{{ url_for('students_page') }}" class="nav-link">
+                        <i class="fas fa-users"></i>
+                        <span>Danh sách SV</span>
+                    </a>
+                </li>
+                <li class="nav-item {% if request.endpoint == 'history_page' %}active{% endif %}">
+                    <a href="{{ url_for('history_page') }}" class="nav-link">
+                        <i class="fas fa-history"></i>
+                        <span>Lịch sử</span>
+                    </a>
+                </li>
+            </ul>
+            
+            <div class="sidebar-footer">
+                <p>🥉 Đề tài Xử lý ảnh</p>
+                <small>Face Recognition + Gender</small>
+            </div>
+        </nav>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-header">
+                <div class="header-title">
+                    <h1>{% block page_title %}Dashboard{% endblock %}</h1>
+                </div>
+                <div class="header-actions">
+                    <span class="current-time" id="currentTime"></span>
+                </div>
+            </header>
+            
+            <div class="content-wrapper">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+    
+    <script>
+        // Update current time
+        function updateTime() {
+            const now = new Date();
+            const options = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            };
+            document.getElementById('currentTime').textContent = now.toLocaleDateString('vi-VN', options);
+        }
+        updateTime();
+        setInterval(updateTime, 1000);
+    </script>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+
+{% block title %}Danh sách sinh viên - Điểm Danh{% endblock %}
+
+{% block page_title %}👥 Danh sách sinh viên{% endblock %}
+
+{% block content %}
+<div class="students-page">
+    <div class="page-header">
+        <div class="header-info">
+            <p>Tổng số: <strong>{{ students|length }}</strong> sinh viên</p>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('register_page') }}" class="btn btn-primary">
+                <i class="fas fa-user-plus"></i> Thêm sinh viên
+            </a>
+        </div>
+    </div>
+
+    {% if students %}
+    <div class="table-container card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Ảnh</th>
+                    <th>MSSV</th>
+                    <th>Họ tên</th>
+                    <th>Lớp</th>
+                    <th>Giới tính</th>
+                    <th>Ngày đăng ký</th>
+                    <th>Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for student in students %}
+                <tr data-id="{{ student.id }}">
+                    <td>
+                        {% if student.face_image %}
+                        <img src="{{ url_for('static', filename='uploads/faces/' + student.face_image) }}"
+                            alt="{{ student.name }}" class="student-avatar">
+                        {% else %}
+                        <div class="avatar-placeholder">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        {% endif %}
+                    </td>
+                    <td><strong>{{ student.student_code }}</strong></td>
+                    <td>{{ student.name }}</td>
+                    <td>{{ student.class_name }}</td>
+                    <td>
+                        <span class="gender-badge {{ 'male' if student.gender == 'Nam' else 'female' }}">
+                            {% if student.gender == 'Nam' %}
+                            <i class="fas fa-mars"></i>
+                            {% else %}
+                            <i class="fas fa-venus"></i>
+                            {% endif %}
+                            {{ student.gender }}
+                        </span>
+                    </td>
+                    <td>{{ student.created_at[:10] if student.created_at else 'N/A' }}</td>
+                    <td>
+                        <button class="btn btn-sm btn-danger delete-btn" data-id="{{ student.id }}"
+                            data-name="{{ student.name }}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state card">
+        <i class="fas fa-users-slash"></i>
+        <h3>Chưa có sinh viên nào</h3>
+        <p>Hãy đăng ký sinh viên mới để bắt đầu sử dụng hệ thống</p>
+        <a href="{{ url_for('register_page') }}" class="btn btn-primary">
+            <i class="fas fa-user-plus"></i> Đăng ký ngay
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" class="modal hidden">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-exclamation-triangle"></i> Xác nhận xóa</h3>
+        </div>
+        <div class="modal-body">
+            <p>Bạn có chắc muốn xóa sinh viên <strong id="deleteStudentName"></strong>?</p>
+            <p class="warning-text">Hành động này không thể hoàn tác!</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" id="cancelDelete">Hủy</button>
+            <button class="btn btn-danger" id="confirmDelete">Xóa</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const deleteModal = document.getElementById('deleteModal');
+    const deleteStudentName = document.getElementById('deleteStudentName');
+    const cancelDelete = document.getElementById('cancelDelete');
+    const confirmDelete = document.getElementById('confirmDelete');
+
+    let deleteId = null;
+
+    // Delete button click
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            deleteId = btn.dataset.id;
+            deleteStudentName.textContent = btn.dataset.name;
+            deleteModal.classList.remove('hidden');
+        });
+    });
+
+    // Cancel delete
+    cancelDelete.addEventListener('click', () => {
+        deleteModal.classList.add('hidden');
+        deleteId = null;
+    });
+
+    // Confirm delete
+    confirmDelete.addEventListener('click', async () => {
+        if (!deleteId) return;
+
+        try {
+            const response = await fetch(`/api/students/${deleteId}`, {
+                method: 'DELETE'
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Remove row from table
+                document.querySelector(`tr[data-id="${deleteId}"]`).remove();
+                deleteModal.classList.add('hidden');
+
+                // Update count
+                const count = document.querySelectorAll('tbody tr').length;
+                document.querySelector('.header-info p strong').textContent = count;
+            } else {
+                alert('Lỗi: ' + data.message);
+            }
+        } catch (err) {
+            alert('Lỗi kết nối: ' + err.message);
+        }
+
+        deleteId = null;
+    });
+
+    // Close modal on background click
+    deleteModal.addEventListener('click', (e) => {
+        if (e.target === deleteModal) {
+            deleteModal.classList.add('hidden');
+            deleteId = null;
+        }
+    });
+</script>
+{% endblock %}
