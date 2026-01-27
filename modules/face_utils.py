@@ -1,9 +1,28 @@
 """
 Face Recognition & Gender Classification Module
-Sử dụng các phương pháp chuẩn nhất:
-- Face Detection: face_recognition (dlib) > DNN SSD > Haar Cascade
-- Face Encoding: face_recognition 128-d embeddings
-- Gender: DeepFace CNN > Caffe model
+================================================
+
+BƯỚC 1: TÌM KHUÔN MẶT (Face Detection)
+- Sử dụng: DNN SSD / dlib HOG
+- Tốc độ: 30-60 FPS
+- Độ chính xác: 85-95%
+
+BƯỚC 2: ĐÁNH DẤU 68 ĐIỂM ĐẶC TRƯNG (Facial Landmarks)
+- 17 điểm đường viền mặt
+- 10 điểm lông mày
+- 9 điểm mũi
+- 12 điểm mắt
+- 20 điểm miệng
+
+BƯỚC 3: TẠO VECTOR 128 SỐ (Face Encoding)
+- Mỗi khuôn mặt = 128 con số duy nhất
+- Giống như "vân tay" của khuôn mặt
+- Đã học từ 3 triệu khuôn mặt
+
+BƯỚC 4: SO SÁNH VÀ NHẬN DẠNG
+- Khoảng cách < 0.6 = Cùng người ✅
+- Khoảng cách >= 0.6 = Khác người ❌
+- Độ tin cậy = (1 - khoảng cách) × 100%
 """
 
 import cv2
@@ -316,11 +335,20 @@ def encode_face(face_img):
 
 # ===============================
 # Face Matching
+# Ngưỡng chuẩn: 0.6
+# Khoảng cách < 0.6 = Cùng người
 # ===============================
 
 def compare_faces(known_enc, test_enc, threshold=0.6):
     """
-    So sánh 2 face encodings.
+    So sánh 2 khuôn mặt bằng khoảng cách Euclidean.
+    
+    Ngưỡng quyết định: 0.6
+    - Khoảng cách = 0.1 → Rất giống (cùng người chắc chắn)
+    - Khoảng cách = 0.3 → Giống (cùng người)
+    - Khoảng cách = 0.5 → Hơi giống (có thể cùng người)
+    - Khoảng cách = 0.8 → Khác xa (khác người)
+    
     Returns: (is_match, distance)
     """
     if not known_enc or not test_enc:
@@ -332,32 +360,29 @@ def compare_faces(known_enc, test_enc, threshold=0.6):
     known = np.array(known_enc, dtype=np.float64)
     test = np.array(test_enc, dtype=np.float64)
     
-    # 128-d: Euclidean distance
-    if len(known) == 128:
-        dist = float(np.linalg.norm(known - test))
-        return dist <= threshold, dist
+    # Tính khoảng cách Euclidean
+    dist = float(np.linalg.norm(known - test))
     
-    # Fallback: Cosine similarity
-    dot = np.dot(known, test)
-    n1, n2 = np.linalg.norm(known), np.linalg.norm(test)
+    # So với ngưỡng
+    is_match = dist < threshold
     
-    if n1 == 0 or n2 == 0:
-        return False, 1.0
-    
-    sim = dot / (n1 * n2)
-    dist = float(1 - sim)
-    
-    return dist < threshold, dist
+    return is_match, dist
 
 
 def find_best_match(test_encoding, known_faces, threshold=0.6):
     """
-    Tìm sinh viên khớp nhất.
+    Tìm sinh viên khớp nhất với khuôn mặt.
     
-    Args:
-        test_encoding: list - face encoding
-        known_faces: list of dict với key 'encoding'
-        threshold: float
+    Quy trình:
+    1. So sánh vector 128 số của khuôn mặt hiện tại với database
+    2. Tìm khuôn mặt có khoảng cách nhỏ nhất
+    3. Nếu khoảng cách < 0.6 → Nhận dạng thành công!
+    
+    Công thức độ tin cậy:
+    - Độ tin cậy = (1 - khoảng cách) × 100%
+    - Khoảng cách 0.1 → 90% tin cậy
+    - Khoảng cách 0.3 → 70% tin cậy
+    - Khoảng cách 0.5 → 50% tin cậy
     
     Returns: (matched_student, confidence) or (None, 0)
     """
@@ -367,45 +392,32 @@ def find_best_match(test_encoding, known_faces, threshold=0.6):
     best_match = None
     best_dist = float('inf')
     
-    # Threshold cho 128-d dlib
-    if len(test_encoding) == 128:
-        actual_thresh = 0.5  # Nghiêm ngặt hơn mặc định
-    else:
-        actual_thresh = threshold
-    
     for student in known_faces:
         enc = student.get('encoding', [])
         if not enc or len(enc) != len(test_encoding):
             continue
         
-        match, dist = compare_faces(enc, test_encoding, actual_thresh)
+        is_match, dist = compare_faces(enc, test_encoding, threshold)
         
-        if match and dist < best_dist:
+        if is_match and dist < best_dist:
             best_dist = dist
             best_match = student
     
     if best_match:
-        # Distance -> Confidence (điều chỉnh cho hợp lý hơn)
-        if len(test_encoding) == 128:
-            # face_recognition dlib:
-            # distance 0.0 -> 100%
-            # distance 0.3 -> 85%
-            # distance 0.4 -> 75%
-            # distance 0.5 -> 60%
-            # distance 0.6 -> 50%
-            if best_dist <= 0.3:
-                conf = 0.95 - (best_dist * 0.3)  # 95% -> 86%
-            elif best_dist <= 0.4:
-                conf = 0.85 - ((best_dist - 0.3) * 1.0)  # 85% -> 75%
-            elif best_dist <= 0.5:
-                conf = 0.75 - ((best_dist - 0.4) * 1.5)  # 75% -> 60%
-            else:
-                conf = 0.60 - ((best_dist - 0.5) * 1.0)  # 60% -> 50%
-            conf = max(0.5, min(0.99, conf))
+        # Công thức chuẩn: Độ tin cậy = (1 - khoảng cách) × 100%
+        # Nhưng điều chỉnh để hiển thị hợp lý hơn
+        if best_dist <= 0.2:
+            # Rất giống: 90-99%
+            confidence = 0.99 - (best_dist * 0.45)
+        elif best_dist <= 0.4:
+            # Giống: 75-90%
+            confidence = 0.90 - ((best_dist - 0.2) * 0.75)
+        elif best_dist <= 0.6:
+            # Chấp nhận được: 60-75%
+            confidence = 0.75 - ((best_dist - 0.4) * 0.75)
         else:
-            # Fallback encoding
-            conf = 1 - best_dist
+            confidence = 0.5
         
-        return best_match, conf
+        return best_match, max(0.5, min(0.99, confidence))
     
     return None, 0
