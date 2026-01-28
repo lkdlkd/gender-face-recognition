@@ -1,31 +1,41 @@
 import sqlite3
 import os
 import json
-from datetime import datetime
+from datetime import datetime, time, timezone, timedelta
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB_PATH = os.path.join(BASE_DIR, "database.db")
 
+# Mui gio Viet Nam (UTC+7)
+VIETNAM_TZ = timezone(timedelta(hours=7))
+
+# Gio bat dau lam viec (9:30 sang) - diem danh sau gio nay se bi tinh la muon
+WORK_START_TIME = time(9, 30, 0)  # 9h30 sáng
+
+def get_vietnam_now():
+    """Lay thoi gian hien tai theo gio Viet Nam"""
+    return datetime.now(VIETNAM_TZ)
+
 
 def get_connection():
-    """Tạo kết nối đến database"""
+    """Tao ket noi den database"""
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
 
 def init_db():
-    """Khởi tạo database và các bảng"""
+    """Khoi tao database va cac bang"""
     conn = get_connection()
     cursor = conn.cursor()
     
-    # Bảng sinh viên
+    # Bang nhan vien
     cursor.execute('''
-        CREATE TABLE IF NOT EXISTS students (
+        CREATE TABLE IF NOT EXISTS employees (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            student_code TEXT UNIQUE NOT NULL,
+            employee_code TEXT UNIQUE NOT NULL,
             name TEXT NOT NULL,
-            class_name TEXT NOT NULL,
+            department TEXT NOT NULL,
             gender TEXT,
             face_encoding TEXT,
             face_image TEXT,
@@ -33,17 +43,17 @@ def init_db():
         )
     ''')
     
-    # Bảng điểm danh
+    # Bang diem danh
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS attendance (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            student_id INTEGER NOT NULL,
+            employee_id INTEGER NOT NULL,
             check_in_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             gender_detected TEXT,
             emotion_detected TEXT,
             confidence REAL,
             status TEXT DEFAULT 'present',
-            FOREIGN KEY (student_id) REFERENCES students(id)
+            FOREIGN KEY (employee_id) REFERENCES employees(id)
         )
     ''')
     
@@ -53,83 +63,83 @@ def init_db():
 
 
 # ===============================
-# Student CRUD Operations
+# Employee CRUD Operations
 # ===============================
 
-def add_student(student_code, name, class_name, gender, face_encoding, face_image):
-    """Thêm sinh viên mới"""
+def add_employee(employee_code, name, department, gender, face_encoding, face_image):
+    """Them nhan vien moi"""
     conn = get_connection()
     cursor = conn.cursor()
     
     try:
-        # face_encoding đã là list Python thuần túy từ face_utils
+        # face_encoding da la list Python thuan tuy tu face_utils
         if face_encoding is not None and len(face_encoding) > 0:
             encoding_json = json.dumps(face_encoding)
         else:
             encoding_json = None
             
         cursor.execute('''
-            INSERT INTO students (student_code, name, class_name, gender, face_encoding, face_image)
+            INSERT INTO employees (employee_code, name, department, gender, face_encoding, face_image)
             VALUES (?, ?, ?, ?, ?, ?)
-        ''', (student_code, name, class_name, gender, encoding_json, face_image))
+        ''', (employee_code, name, department, gender, encoding_json, face_image))
         conn.commit()
         return cursor.lastrowid
     except sqlite3.IntegrityError:
         return None
     except Exception as e:
-        print(f"add_student error: {e}")
+        print(f"add_employee error: {e}")
         return None
     finally:
         conn.close()
 
 
-def get_all_students(search=None):
-    """Lấy danh sách tất cả sinh viên với tùy chọn tìm kiếm"""
+def get_all_employees(search=None):
+    """Lay danh sach tat ca nhan vien voi tuy chon tim kiem"""
     conn = get_connection()
     cursor = conn.cursor()
     
     if search:
         search_term = f'%{search}%'
         cursor.execute('''
-            SELECT * FROM students 
-            WHERE student_code LIKE ? 
+            SELECT * FROM employees 
+            WHERE employee_code LIKE ? 
                OR name LIKE ? 
-               OR class_name LIKE ?
+               OR department LIKE ?
             ORDER BY created_at DESC
         ''', (search_term, search_term, search_term))
     else:
-        cursor.execute('SELECT * FROM students ORDER BY created_at DESC')
+        cursor.execute('SELECT * FROM employees ORDER BY created_at DESC')
     
-    students = cursor.fetchall()
+    employees = cursor.fetchall()
     conn.close()
-    return students
+    return employees
 
 
-def get_student_by_id(student_id):
-    """Lấy thông tin sinh viên theo ID"""
+def get_employee_by_id(employee_id):
+    """Lay thong tin nhan vien theo ID"""
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM students WHERE id = ?', (student_id,))
-    student = cursor.fetchone()
+    cursor.execute('SELECT * FROM employees WHERE id = ?', (employee_id,))
+    employee = cursor.fetchone()
     conn.close()
-    return student
+    return employee
 
 
-def get_student_by_code(student_code):
-    """Lấy thông tin sinh viên theo mã sinh viên"""
+def get_employee_by_code(employee_code):
+    """Lay thong tin nhan vien theo ma nhan vien"""
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM students WHERE student_code = ?', (student_code,))
-    student = cursor.fetchone()
+    cursor.execute('SELECT * FROM employees WHERE employee_code = ?', (employee_code,))
+    employee = cursor.fetchone()
     conn.close()
-    return student
+    return employee
 
 
-def delete_student(student_id):
-    """Xóa sinh viên"""
+def delete_employee(employee_id):
+    """Xoa nhan vien"""
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute('DELETE FROM students WHERE id = ?', (student_id,))
+    cursor.execute('DELETE FROM employees WHERE id = ?', (employee_id,))
     conn.commit()
     affected = cursor.rowcount
     conn.close()
@@ -137,23 +147,23 @@ def delete_student(student_id):
 
 
 def get_all_face_encodings():
-    """Lấy tất cả face encodings từ database"""
+    """Lay tat ca face encodings tu database"""
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT id, student_code, name, class_name, gender, face_encoding FROM students WHERE face_encoding IS NOT NULL')
-    students = cursor.fetchall()
+    cursor.execute('SELECT id, employee_code, name, department, gender, face_encoding FROM employees WHERE face_encoding IS NOT NULL')
+    employees = cursor.fetchall()
     conn.close()
     
     result = []
-    for student in students:
-        if student['face_encoding']:
-            encoding = json.loads(student['face_encoding'])
+    for emp in employees:
+        if emp['face_encoding']:
+            encoding = json.loads(emp['face_encoding'])
             result.append({
-                'id': student['id'],
-                'student_code': student['student_code'],
-                'name': student['name'],
-                'class_name': student['class_name'],
-                'gender': student['gender'],
+                'id': emp['id'],
+                'employee_code': emp['employee_code'],
+                'name': emp['name'],
+                'department': emp['department'],
+                'gender': emp['gender'],
                 'encoding': encoding
             })
     return result
@@ -163,14 +173,29 @@ def get_all_face_encodings():
 # Attendance CRUD Operations
 # ===============================
 
-def add_attendance(student_id, gender_detected, emotion_detected, confidence, status='present'):
-    """Ghi điểm danh"""
+def add_attendance(employee_id, gender_detected, emotion_detected, confidence, status=None):
+    """Ghi diem danh - tu dong xac dinh dung gio hoac muon (theo gio Viet Nam)"""
     conn = get_connection()
     cursor = conn.cursor()
+    
+    # Thoi gian hien tai theo gio Viet Nam
+    vietnam_now = get_vietnam_now()
+    
+    # Tu dong xac dinh trang thai dua vao thoi gian hien tai
+    if status is None:
+        current_time = vietnam_now.time()
+        if current_time <= WORK_START_TIME:
+            status = 'on_time'  # Dung gio
+        else:
+            status = 'late'  # Muon
+    
+    # Luu thoi gian check-in theo gio Viet Nam
+    check_in_time = vietnam_now.strftime('%Y-%m-%d %H:%M:%S')
+    
     cursor.execute('''
-        INSERT INTO attendance (student_id, gender_detected, emotion_detected, confidence, status)
-        VALUES (?, ?, ?, ?, ?)
-    ''', (student_id, gender_detected, emotion_detected, confidence, status))
+        INSERT INTO attendance (employee_id, check_in_time, gender_detected, emotion_detected, confidence, status)
+        VALUES (?, ?, ?, ?, ?, ?)
+    ''', (employee_id, check_in_time, gender_detected, emotion_detected, confidence, status))
     conn.commit()
     attendance_id = cursor.lastrowid
     conn.close()
@@ -178,14 +203,14 @@ def add_attendance(student_id, gender_detected, emotion_detected, confidence, st
 
 
 def get_attendance_today():
-    """Lấy danh sách điểm danh hôm nay"""
+    """Lay danh sach diem danh hom nay (theo gio Viet Nam)"""
     conn = get_connection()
     cursor = conn.cursor()
-    today = datetime.now().strftime('%Y-%m-%d')
+    today = get_vietnam_now().strftime('%Y-%m-%d')
     cursor.execute('''
-        SELECT a.*, s.student_code, s.name, s.class_name, s.gender as registered_gender
+        SELECT a.*, e.employee_code, e.name, e.department, e.gender as registered_gender
         FROM attendance a
-        JOIN students s ON a.student_id = s.id
+        JOIN employees e ON a.employee_id = e.id
         WHERE DATE(a.check_in_time) = ?
         ORDER BY a.check_in_time DESC
     ''', (today,))
@@ -195,20 +220,20 @@ def get_attendance_today():
 
 
 def get_attendance_history(days=7, search=None, date=None):
-    """Lấy lịch sử điểm danh với tùy chọn tìm kiếm và lọc theo ngày"""
+    """Lay lich su diem danh voi tuy chon tim kiem va loc theo ngay"""
     conn = get_connection()
     cursor = conn.cursor()
     
     base_query = '''
-        SELECT a.*, s.student_code, s.name, s.class_name, s.gender as registered_gender
+        SELECT a.*, e.employee_code, e.name, e.department, e.gender as registered_gender
         FROM attendance a
-        JOIN students s ON a.student_id = s.id
+        JOIN employees e ON a.employee_id = e.id
     '''
     
     conditions = []
     params = []
     
-    # Lọc theo ngày cụ thể hoặc N ngày gần nhất
+    # Loc theo ngay cu the hoac N ngay gan nhat
     if date:
         conditions.append("DATE(a.check_in_time) = ?")
         params.append(date)
@@ -216,10 +241,10 @@ def get_attendance_history(days=7, search=None, date=None):
         conditions.append("a.check_in_time >= datetime('now', ?)")
         params.append(f'-{days} days')
     
-    # Tìm kiếm theo MSSV, tên, lớp
+    # Tim kiem theo ma NV, ten, phong ban
     if search:
         search_term = f'%{search}%'
-        conditions.append("(s.student_code LIKE ? OR s.name LIKE ? OR s.class_name LIKE ?)")
+        conditions.append("(e.employee_code LIKE ? OR e.name LIKE ? OR e.department LIKE ?)")
         params.extend([search_term, search_term, search_term])
     
     query = base_query + ' WHERE ' + ' AND '.join(conditions) + ' ORDER BY a.check_in_time DESC'
@@ -230,7 +255,7 @@ def get_attendance_history(days=7, search=None, date=None):
 
 
 def get_attendance_dates():
-    """Lấy danh sách các ngày có điểm danh"""
+    """Lay danh sach cac ngay co diem danh"""
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute('''
@@ -245,26 +270,26 @@ def get_attendance_dates():
 
 
 def get_attendance_stats_by_date(date=None):
-    """Thống kê điểm danh theo ngày"""
+    """Thong ke diem danh theo ngay"""
     conn = get_connection()
     cursor = conn.cursor()
     
     if not date:
-        date = datetime.now().strftime('%Y-%m-%d')
+        date = get_vietnam_now().strftime('%Y-%m-%d')
     
-    # Tổng số sinh viên
-    cursor.execute('SELECT COUNT(*) as total FROM students')
-    total_students = cursor.fetchone()['total']
+    # Tong so nhan vien
+    cursor.execute('SELECT COUNT(*) as total FROM employees')
+    total_employees = cursor.fetchone()['total']
     
-    # Số sinh viên điểm danh trong ngày
+    # So nhan vien diem danh trong ngay
     cursor.execute('''
-        SELECT COUNT(DISTINCT student_id) as attended 
+        SELECT COUNT(DISTINCT employee_id) as attended 
         FROM attendance 
         WHERE DATE(check_in_time) = ?
     ''', (date,))
     attended = cursor.fetchone()['attended']
     
-    # Thống kê theo trạng thái
+    # Thong ke theo trang thai
     cursor.execute('''
         SELECT status, COUNT(*) as count 
         FROM attendance 
@@ -273,66 +298,77 @@ def get_attendance_stats_by_date(date=None):
     ''', (date,))
     status_stats = {row['status']: row['count'] for row in cursor.fetchall()}
     
-    # Thống kê theo lớp
+    # Thong ke theo phong ban
     cursor.execute('''
-        SELECT s.class_name, COUNT(DISTINCT a.student_id) as count
+        SELECT e.department, COUNT(DISTINCT a.employee_id) as count
         FROM attendance a
-        JOIN students s ON a.student_id = s.id
+        JOIN employees e ON a.employee_id = e.id
         WHERE DATE(a.check_in_time) = ?
-        GROUP BY s.class_name
+        GROUP BY e.department
         ORDER BY count DESC
     ''', (date,))
-    class_stats = {row['class_name']: row['count'] for row in cursor.fetchall()}
+    dept_stats = {row['department']: row['count'] for row in cursor.fetchall()}
     
     conn.close()
     
     return {
         'date': date,
-        'total_students': total_students,
+        'total_employees': total_employees,
         'attended': attended,
-        'absent': total_students - attended,
-        'attendance_rate': round(attended / total_students * 100, 1) if total_students > 0 else 0,
+        'absent': total_employees - attended,
+        'attendance_rate': round(attended / total_employees * 100, 1) if total_employees > 0 else 0,
         'status_stats': status_stats,
-        'class_stats': class_stats
+        'dept_stats': dept_stats
     }
 
 
-def check_already_attended_today(student_id):
-    """Kiểm tra sinh viên đã điểm danh hôm nay chưa"""
+def check_already_attended_today(employee_id):
+    """Kiem tra nhan vien da diem danh hom nay chua (theo gio Viet Nam)"""
     conn = get_connection()
     cursor = conn.cursor()
-    today = datetime.now().strftime('%Y-%m-%d')
+    today = get_vietnam_now().strftime('%Y-%m-%d')
     cursor.execute('''
         SELECT COUNT(*) as count FROM attendance 
-        WHERE student_id = ? AND DATE(check_in_time) = ?
-    ''', (student_id, today))
+        WHERE employee_id = ? AND DATE(check_in_time) = ?
+    ''', (employee_id, today))
     result = cursor.fetchone()
     conn.close()
     return result['count'] > 0
 
 
 def get_attendance_stats():
-    """Thống kê điểm danh"""
+    """Thong ke diem danh (theo gio Viet Nam)"""
     conn = get_connection()
     cursor = conn.cursor()
     
-    # Tổng số sinh viên
-    cursor.execute('SELECT COUNT(*) as total FROM students')
-    total_students = cursor.fetchone()['total']
+    # Tong so nhan vien
+    cursor.execute('SELECT COUNT(*) as total FROM employees')
+    total_employees = cursor.fetchone()['total']
     
-    # Số sinh viên đã điểm danh hôm nay
-    today = datetime.now().strftime('%Y-%m-%d')
+    # So nhan vien da diem danh hom nay
+    today = get_vietnam_now().strftime('%Y-%m-%d')
     cursor.execute('''
-        SELECT COUNT(DISTINCT student_id) as attended 
+        SELECT COUNT(DISTINCT employee_id) as attended 
         FROM attendance 
         WHERE DATE(check_in_time) = ?
     ''', (today,))
     attended_today = cursor.fetchone()['attended']
     
-    # Thống kê theo giới tính
+    # Thong ke dung gio va muon hom nay
+    cursor.execute('''
+        SELECT status, COUNT(*) as count 
+        FROM attendance 
+        WHERE DATE(check_in_time) = ?
+        GROUP BY status
+    ''', (today,))
+    status_stats = {row['status']: row['count'] for row in cursor.fetchall()}
+    on_time_count = status_stats.get('on_time', 0)
+    late_count = status_stats.get('late', 0)
+    
+    # Thong ke theo gioi tinh
     cursor.execute('''
         SELECT gender, COUNT(*) as count 
-        FROM students 
+        FROM employees 
         GROUP BY gender
     ''')
     gender_stats = cursor.fetchall()
@@ -340,12 +376,14 @@ def get_attendance_stats():
     conn.close()
     
     return {
-        'total_students': total_students,
+        'total_employees': total_employees,
         'attended_today': attended_today,
-        'attendance_rate': round(attended_today / total_students * 100, 1) if total_students > 0 else 0,
+        'on_time_count': on_time_count,
+        'late_count': late_count,
+        'attendance_rate': round(attended_today / total_employees * 100, 1) if total_employees > 0 else 0,
         'gender_stats': {row['gender']: row['count'] for row in gender_stats}
     }
 
 
-# Khởi tạo database khi import module
+# Khoi tao database khi import module
 init_db()

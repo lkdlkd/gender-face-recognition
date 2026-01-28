@@ -1,26 +1,26 @@
 {% extends 'base.html' %}
 
-{% block title %}Danh sách sinh viên - Điểm Danh{% endblock %}
+{% block title %}Danh sach nhan vien - Diem Danh{% endblock %}
 
-{% block page_title %}👥 Danh sách sinh viên{% endblock %}
+{% block page_title %}Danh sach nhan vien{% endblock %}
 
 {% block content %}
-<div class="students-page">
+<div class="employees-page">
     <!-- Search Section -->
     <div class="filter-section card">
-        <form method="GET" action="/students" class="filter-form">
+        <form method="GET" action="/employees" class="filter-form">
             <div class="filter-row">
                 <div class="filter-group flex-grow">
-                    <label for="search"><i class="fas fa-search"></i> Tìm kiếm sinh viên</label>
+                    <label for="search"><i class="fas fa-search"></i> Tìm kiếm nhân viên</label>
                     <input type="text" name="search" id="search" class="form-control" 
-                           placeholder="Nhập MSSV, họ tên hoặc lớp..." value="{{ search }}">
+                           placeholder="Nhập mã NV, họ tên hoặc phòng ban..." value="{{ search }}">
                 </div>
                 <div class="filter-actions">
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-search"></i> Tìm
                     </button>
-                    <a href="/students" class="btn btn-secondary">
-                        <i class="fas fa-redo"></i> Reset
+                    <a href="/employees" class="btn btn-secondary">
+                        <i class="fas fa-redo"></i> Đặt lại
                     </a>
                 </div>
             </div>
@@ -29,60 +29,60 @@
 
     <div class="page-header">
         <div class="header-info">
-            <p>Tổng số: <strong>{{ students|length }}</strong> sinh viên
+            <p>Tổng số: <strong>{{ employees|length }}</strong> nhân viên
             {% if search %} - Tìm: "{{ search }}"{% endif %}</p>
         </div>
         <div class="header-actions">
             <a href="{{ url_for('register_page') }}" class="btn btn-primary">
-                <i class="fas fa-user-plus"></i> Thêm sinh viên
+                <i class="fas fa-user-plus"></i> Thêm nhân viên
             </a>
         </div>
     </div>
 
-    {% if students %}
+    {% if employees %}
     <div class="table-container card">
         <table class="data-table">
             <thead>
                 <tr>
                     <th>Ảnh</th>
-                    <th>MSSV</th>
+                    <th>Mã NV</th>
                     <th>Họ tên</th>
-                    <th>Lớp</th>
+                    <th>Phòng ban</th>
                     <th>Giới tính</th>
                     <th>Ngày đăng ký</th>
                     <th>Thao tác</th>
                 </tr>
             </thead>
             <tbody>
-                {% for student in students %}
-                <tr data-id="{{ student.id }}">
+                {% for emp in employees %}
+                <tr data-id="{{ emp.id }}">
                     <td>
-                        {% if student.face_image %}
-                        <img src="{{ url_for('static', filename='uploads/faces/' + student.face_image) }}"
-                            alt="{{ student.name }}" class="student-avatar">
+                        {% if emp.face_image %}
+                        <img src="{{ url_for('static', filename='uploads/faces/' + emp.face_image) }}"
+                            alt="{{ emp.name }}" class="employee-avatar">
                         {% else %}
                         <div class="avatar-placeholder">
                             <i class="fas fa-user"></i>
                         </div>
                         {% endif %}
                     </td>
-                    <td><strong>{{ student.student_code }}</strong></td>
-                    <td>{{ student.name }}</td>
-                    <td>{{ student.class_name }}</td>
+                    <td><strong>{{ emp.employee_code }}</strong></td>
+                    <td>{{ emp.name }}</td>
+                    <td>{{ emp.department }}</td>
                     <td>
-                        <span class="gender-badge {{ 'male' if student.gender == 'Nam' else 'female' }}">
-                            {% if student.gender == 'Nam' %}
+                        <span class="gender-badge {{ 'male' if emp.gender == 'Nam' else 'female' }}">
+                            {% if emp.gender == 'Nam' %}
                             <i class="fas fa-mars"></i>
                             {% else %}
                             <i class="fas fa-venus"></i>
                             {% endif %}
-                            {{ student.gender }}
+                            {{ emp.gender }}
                         </span>
                     </td>
-                    <td>{{ student.created_at[:10] if student.created_at else 'N/A' }}</td>
+                    <td>{{ emp.created_at[:10] if emp.created_at else 'N/A' }}</td>
                     <td>
-                        <button class="btn btn-sm btn-danger delete-btn" data-id="{{ student.id }}"
-                            data-name="{{ student.name }}">
+                        <button class="btn btn-sm btn-danger delete-btn" data-id="{{ emp.id }}"
+                            data-name="{{ emp.name }}">
                             <i class="fas fa-trash"></i>
                         </button>
                     </td>
@@ -94,8 +94,8 @@
     {% else %}
     <div class="empty-state card">
         <i class="fas fa-users-slash"></i>
-        <h3>Chưa có sinh viên nào</h3>
-        <p>Hãy đăng ký sinh viên mới để bắt đầu sử dụng hệ thống</p>
+        <h3>Chưa có nhân viên nào</h3>
+       <p>Hãy đăng ký nhân viên mới để bắt đầu sử dụng hệ thống</p>
         <a href="{{ url_for('register_page') }}" class="btn btn-primary">
             <i class="fas fa-user-plus"></i> Đăng ký ngay
         </a>
@@ -110,7 +110,7 @@
             <h3><i class="fas fa-exclamation-triangle"></i> Xác nhận xóa</h3>
         </div>
         <div class="modal-body">
-            <p>Bạn có chắc muốn xóa sinh viên <strong id="deleteStudentName"></strong>?</p>
+            <p>Bạn có chắc muốn xóa nhân viên <strong id="deleteEmployeeName"></strong>?</p>
             <p class="warning-text">Hành động này không thể hoàn tác!</p>
         </div>
         <div class="modal-footer">
@@ -124,7 +124,7 @@
 {% block scripts %}
 <script>
     const deleteModal = document.getElementById('deleteModal');
-    const deleteStudentName = document.getElementById('deleteStudentName');
+    const deleteEmployeeName = document.getElementById('deleteEmployeeName');
     const cancelDelete = document.getElementById('cancelDelete');
     const confirmDelete = document.getElementById('confirmDelete');
 
@@ -134,7 +134,7 @@
     document.querySelectorAll('.delete-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             deleteId = btn.dataset.id;
-            deleteStudentName.textContent = btn.dataset.name;
+            deleteEmployeeName.textContent = btn.dataset.name;
             deleteModal.classList.remove('hidden');
         });
     });
@@ -150,7 +150,7 @@
         if (!deleteId) return;
 
         try {
-            const response = await fetch(`/api/students/${deleteId}`, {
+            const response = await fetch(`/api/employees/${deleteId}`, {
                 method: 'DELETE'
             });
 

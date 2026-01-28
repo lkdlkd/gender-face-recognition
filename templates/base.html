@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Điểm Danh Sinh Viên{% endblock %}</title>
+    <title>{% block title %}Diem Danh Nhan Vien{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -15,7 +15,7 @@
             <div class="sidebar-header">
                 <div class="logo">
                     <i class="fas fa-user-check"></i>
-                    <span>Điểm Danh AI</span>
+                    <span>Điểm Danh</span>
                 </div>
             </div>
             
@@ -29,7 +29,7 @@
                 <li class="nav-item {% if request.endpoint == 'register_page' %}active{% endif %}">
                     <a href="{{ url_for('register_page') }}" class="nav-link">
                         <i class="fas fa-user-plus"></i>
-                        <span>Đăng ký SV</span>
+                        <span>Đăng ký NV</span>
                     </a>
                 </li>
                 <li class="nav-item {% if request.endpoint == 'attendance_page' %}active{% endif %}">
@@ -38,10 +38,10 @@
                         <span>Điểm danh</span>
                     </a>
                 </li>
-                <li class="nav-item {% if request.endpoint == 'students_page' %}active{% endif %}">
-                    <a href="{{ url_for('students_page') }}" class="nav-link">
+                <li class="nav-item {% if request.endpoint == 'employees_page' %}active{% endif %}">
+                    <a href="{{ url_for('employees_page') }}" class="nav-link">
                         <i class="fas fa-users"></i>
-                        <span>Danh sách SV</span>
+                        <span>Danh sách NV</span>
                     </a>
                 </li>
                 <li class="nav-item {% if request.endpoint == 'history_page' %}active{% endif %}">
@@ -53,7 +53,7 @@
             </ul>
             
             <div class="sidebar-footer">
-                <p>🥉 Đề tài Xử lý ảnh</p>
+                <p>Hệ thống Điểm danh</p>
                 <small>Face Recognition + Gender</small>
             </div>
         </nav>

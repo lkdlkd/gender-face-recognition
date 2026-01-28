@@ -481,8 +481,8 @@ def compare_faces(known_enc, test_enc, threshold=0.6):
 
 def find_best_match(test_encoding, known_faces, threshold=0.6):
     """
-    Find best matching student for a face.
-    Returns: (matched_student, confidence)
+    Find best matching employee for a face.
+    Returns: (matched_employee, confidence)
     """
     if not test_encoding:
         return None, 0.0
@@ -493,8 +493,8 @@ def find_best_match(test_encoding, known_faces, threshold=0.6):
     best_match = None
     best_distance = float('inf')
     
-    for student in known_faces:
-        encoding = student.get('encoding', [])
+    for employee in known_faces:
+        encoding = employee.get('encoding', [])
         
         if not encoding:
             continue
@@ -505,7 +505,7 @@ def find_best_match(test_encoding, known_faces, threshold=0.6):
         
         if is_match and distance < best_distance:
             best_distance = distance
-            best_match = student
+            best_match = employee
     
     if best_match is not None:
         if best_distance <= 0.2:

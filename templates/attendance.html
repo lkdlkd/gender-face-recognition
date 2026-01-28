@@ -1,11 +1,27 @@
 {% extends 'base.html' %}
 
-{% block title %}Điểm danh - Điểm Danh Sinh Viên{% endblock %}
+{% block title %}Điểm danh - Điểm Danh Nhân Viên{% endblock %}
 
-{% block page_title %}📸 Điểm danh bằng khuôn mặt{% endblock %}
+{% block page_title %}Điểm danh bằng khuôn mặt{% endblock %}
 
 {% block content %}
 <div class="attendance-page">
+    <!-- Work Schedule Info -->
+    <div class="schedule-banner">
+        <div class="schedule-item">
+            <i class="fas fa-clock"></i>
+            <span>Giờ VN: <strong id="currentVNTime">--:--:--</strong></span>
+        </div>
+        <div class="schedule-item">
+            <i class="fas fa-business-time"></i>
+            <span>Giờ làm việc: <strong>09:30</strong></span>
+        </div>
+        <div class="schedule-item" id="statusIndicator">
+            <i class="fas fa-info-circle"></i>
+            <span id="statusLabel">--</span>
+        </div>
+    </div>
+
     <div class="attendance-container">
         <!-- Camera Section -->
         <div class="camera-section card">
@@ -105,7 +121,7 @@
             stopCameraBtn.disabled = false;
             recognizeBtn.disabled = false;
         } catch (err) {
-            alert('Không thể truy cập camera: ' + err.message);
+            alert('Khong the truy cap camera: ' + err.message);
         }
     });
 
@@ -136,7 +152,7 @@
         if (!stream) return;
 
         recognizeBtn.disabled = true;
-        recognizeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
+        recognizeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Dang xu ly...';
 
         // Capture frame
         const canvas = document.createElement('canvas');
@@ -165,7 +181,7 @@
                 recognitionResult.innerHTML = `
                     <div class="result-card error">
                         <i class="fas fa-exclamation-circle"></i>
-                        <p>${data.message || 'Không phát hiện khuôn mặt'}</p>
+                        <p>${data.message || 'Khong phat hien khuon mat'}</p>
                     </div>
                 `;
             }
@@ -173,13 +189,13 @@
             recognitionResult.innerHTML = `
                 <div class="result-card error">
                     <i class="fas fa-exclamation-triangle"></i>
-                    <p>Lỗi: ${err.message}</p>
+                    <p>Loi: ${err.message}</p>
                 </div>
             `;
         }
 
         recognizeBtn.disabled = false;
-        recognizeBtn.innerHTML = '<i class="fas fa-search"></i> Điểm danh';
+        recognizeBtn.innerHTML = '<i class="fas fa-search"></i> Diem danh';
     }
 
     recognizeBtn.addEventListener('click', recognizeFace);
@@ -201,11 +217,11 @@
                         </div>
                         <div class="result-body">
                             <h4>${face.name}</h4>
-                            <p><i class="fas fa-id-card"></i> ${face.student_code}</p>
-                            <p><i class="fas fa-graduation-cap"></i> ${face.class_name}</p>
+                            <p><i class="fas fa-id-card"></i> ${face.employee_code}</p>
+                            <p><i class="fas fa-building"></i> ${face.department}</p>
                             <p><i class="fas fa-venus-mars"></i> ${face.gender}</p>
                             <p><i class="fas fa-face-smile"></i> ${face.emotion}</p>
-                            <p><i class="fas fa-percentage"></i> Độ tin cậy: ${face.confidence}%</p>
+                            <p><i class="fas fa-percentage"></i> Do tin cay: ${face.confidence}%</p>
                         </div>
                     </div>
                 `;
@@ -214,10 +230,10 @@
                     <div class="result-card unknown">
                         <div class="result-header">
                             <i class="fas fa-question-circle"></i>
-                            <span class="status-badge">Không nhận diện được</span>
+                            <span class="status-badge">Khong nhan dien duoc</span>
                         </div>
                         <div class="result-body">
-                            <h4>Sinh viên không xác định</h4>
+                            <h4>Nhan vien khong xac dinh</h4>
                             <p><i class="fas fa-venus-mars"></i> ${face.gender}</p>
                             <p><i class="fas fa-face-smile"></i> ${face.emotion}</p>
                         </div>
@@ -265,6 +281,40 @@
         }
     });
 
+    // Update Vietnam time clock
+    function updateVNTimeClock() {
+        const now = new Date();
+        const h = now.getHours();
+        const m = now.getMinutes();
+        const s = now.getSeconds();
+        document.getElementById('currentVNTime').textContent = 
+            `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+        
+        // Update status indicator
+        const statusIndicator = document.getElementById('statusIndicator');
+        const statusLabel = document.getElementById('statusLabel');
+        const totalMinutes = h * 60 + m;
+        const workStartMinutes = 9 * 60 + 30; // 09:30
+        
+        if (totalMinutes < workStartMinutes) {
+            statusLabel.textContent = 'Dung gio';
+            statusIndicator.className = 'schedule-item on-time';
+        } else {
+            const lateMinutes = totalMinutes - workStartMinutes;
+            statusLabel.textContent = `Muon ${lateMinutes} phut`;
+            statusIndicator.className = 'schedule-item late';
+        }
+    }
+    setInterval(updateVNTimeClock, 1000);
+    updateVNTimeClock();
+
+    // Format Vietnam time from server datetime string
+    function formatVNTime(dateStr) {
+        if (!dateStr) return '--:--:--';
+        const parts = dateStr.split(' ');
+        return parts.length >= 2 ? parts[1] : dateStr;
+    }
+
     // Load today's attendance
     async function loadTodayAttendance() {
         try {
@@ -274,13 +324,16 @@
             if (data.success && data.records.length > 0) {
                 let html = '<ul>';
                 data.records.slice(0, 10).forEach(record => {
+                    const statusClass = record.status === 'late' ? 'late' : 'on-time';
+                    const statusText = record.status === 'late' ? 'Muon' : 'Dung gio';
                     html += `
                         <li>
-                            <span class="student-info">
-                                <strong>${record.name}</strong> (${record.student_code})
+                            <span class="employee-info">
+                                <strong>${record.name}</strong> (${record.employee_code})
                             </span>
-                            <span class="check-time">
-                                ${new Date(record.check_in_time).toLocaleTimeString('vi-VN')}
+                            <span class="check-time ${statusClass}">
+                                ${formatVNTime(record.check_in_time)}
+                                <span class="status-tag">${statusText}</span>
                             </span>
                         </li>
                     `;
@@ -288,10 +341,10 @@
                 html += '</ul>';
                 todayList.innerHTML = html;
             } else {
-                todayList.innerHTML = '<p class="empty">Chưa có ai điểm danh hôm nay</p>';
+                todayList.innerHTML = '<p class="empty">Chua co ai diem danh hom nay</p>';
             }
         } catch (err) {
-            todayList.innerHTML = '<p class="error">Lỗi tải dữ liệu</p>';
+            todayList.innerHTML = '<p class="error">Loi tai du lieu</p>';
         }
     }
 

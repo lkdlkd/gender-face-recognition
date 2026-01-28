@@ -25,13 +25,13 @@ EMOTION_LABELS = [
 ]
 
 EMOTION_EMOJIS = {
-    "Tức giận": "😠",
-    "Ghê tởm": "🤢", 
-    "Sợ hãi": "😨",
-    "Vui vẻ": "😊",
-    "Buồn bã": "😢",
-    "Ngạc nhiên": "😲",
-    "Bình thường": "😐"
+    "ức giận": "Angry",
+    "Ghê tởm": "Disgust", 
+    "Sợ hãi": "Fear",
+    "Vui vẻ": "Happy",
+    "Buồn bã": "Sad",
+    "Ngạc nhiên": "Surprise",
+    "Bình thường": "Neutral"
 }
 
 
@@ -47,21 +47,21 @@ def load_emotion_model():
 
 def predict_emotion(face_img):
     """
-    Nhận diện cảm xúc từ ảnh khuôn mặt.
+    Nhan dien cam xuc tu anh khuon mat.
     Returns: (emotion_label, emoji, confidence)
     """
     if not EMOTION_AVAILABLE:
-        return "Bình thường", "😐", 0.0
+        return "Binh thuong", "Neutral", 0.0
     
     model = load_emotion_model()
     if model is None:
-        return "Bình thường", "😐", 0.0
+        return "Binh thuong", "Neutral", 0.0
     
     try:
-        # Chuyển sang grayscale
+        # Chuyen sang grayscale
         gray = cv2.cvtColor(face_img, cv2.COLOR_BGR2GRAY)
         
-        # Resize đúng chuẩn Mini-Xception (64x64)
+        # Resize dung chuan Mini-Xception (64x64)
         gray = cv2.resize(gray, (64, 64))
         
         # Normalize
@@ -82,5 +82,5 @@ def predict_emotion(face_img):
         return emotion, emoji, confidence
         
     except Exception as e:
-        print(f"⚠️ Emotion prediction error: {e}")
-        return "Bình thường", "😐", 0.0
+        print(f"Emotion prediction error: {e}")
+        return "Binh thuong", "Neutral", 0.0

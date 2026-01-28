@@ -1,7 +1,3 @@
-/* ===============================
-   🥉 HỆ THỐNG ĐIỂM DANH SINH VIÊN
-   Modern CSS Styles
-   =============================== */
 
 :root {
     /* Colors */
@@ -261,6 +257,7 @@ body {
 .stat-icon.green { background: linear-gradient(135deg, #10b981, #34d399); }
 .stat-icon.purple { background: linear-gradient(135deg, #8b5cf6, #a78bfa); }
 .stat-icon.orange { background: linear-gradient(135deg, #f59e0b, #fbbf24); }
+.stat-icon.red { background: linear-gradient(135deg, #dc2626, #ef4444); }
 
 .stat-info h3 {
     font-size: 1.75rem;
@@ -721,7 +718,7 @@ input:checked + .slider:before {
     border-bottom: none;
 }
 
-.attendance-list .student-info strong {
+.attendance-list .employee-info strong {
     color: var(--text-primary);
 }
 
@@ -777,7 +774,7 @@ input:checked + .slider:before {
     background: #f8fafc;
 }
 
-.student-avatar {
+.employee-avatar {
     width: 48px;
     height: 48px;
     border-radius: 50%;
@@ -1112,4 +1109,93 @@ select.form-control {
 
 .card {
     animation: fadeIn 0.3s ease;
+}
+
+/* Vietnam Time & Schedule Banner */
+.schedule-banner {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 24px;
+    padding: 16px 24px;
+    margin-bottom: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: var(--radius-lg);
+    color: white;
+    flex-wrap: wrap;
+}
+
+.schedule-banner .schedule-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: var(--radius-md);
+    font-size: 0.95rem;
+}
+
+.schedule-banner .schedule-item i {
+    font-size: 1.1rem;
+}
+
+.schedule-banner .schedule-item.on-time {
+    background: rgba(16, 185, 129, 0.4);
+}
+
+.schedule-banner .schedule-item.late {
+    background: rgba(239, 68, 68, 0.4);
+}
+
+/* Time info in welcome banner */
+.welcome-content .time-info {
+    margin-top: 12px;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-md);
+    display: inline-block;
+    font-size: 0.95rem;
+}
+
+.welcome-content .time-info #vnTime {
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+}
+
+/* Status badges for on_time/late */
+.status-badge.on_time {
+    color: var(--success);
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.status-badge.late {
+    color: #dc2626;
+    background: rgba(220, 38, 38, 0.1);
+}
+
+/* Attendance list time with status */
+.attendance-list .check-time {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.attendance-list .check-time .status-tag {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.attendance-list .check-time.on-time .status-tag {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success);
+}
+
+.attendance-list .check-time.late .status-tag {
+    background: rgba(220, 38, 38, 0.1);
+    color: #dc2626;
 }

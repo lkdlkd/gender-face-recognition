@@ -1,47 +1,47 @@
 {% extends 'base.html' %}
 
-{% block title %}Đăng ký sinh viên - Điểm Danh{% endblock %}
+{% block title %}Đăng ký nhân viên - Điểm Danh{% endblock %}
 
-{% block page_title %}📝 Đăng ký sinh viên mới{% endblock %}
+{% block page_title %}Đăng ký nhân viên mới{% endblock %}
 
 {% block content %}
 <div class="register-page">
     <div class="register-container">
         <!-- Form Section -->
         <div class="form-section card">
-            <h3><i class="fas fa-user-plus"></i> Thông tin sinh viên</h3>
+            <h3><i class="fas fa-user-plus"></i> Thông tin nhân viên</h3>
 
             <form id="registerForm">
                 <div class="form-group">
-                    <label for="studentCode">
-                        <i class="fas fa-id-card"></i> Mã sinh viên (MSSV)
+                    <label for="employeeCode">
+                        <i class="fas fa-id-card"></i> Mã nhân viên
                     </label>
-                    <input type="text" id="studentCode" name="student_code" placeholder="VD: SV001" required>
+                    <input type="text" id="employeeCode" name="employee_code" placeholder="VD: NV001" required>
                 </div>
 
                 <div class="form-group">
-                    <label for="studentName">
+                    <label for="employeeName">
                         <i class="fas fa-user"></i> Họ và tên
                     </label>
-                    <input type="text" id="studentName" name="name" placeholder="VD: Nguyễn Văn A" required>
+                    <input type="text" id="employeeName" name="name" placeholder="VD: Nguyen Van A" required>
                 </div>
 
                 <div class="form-group">
-                    <label for="className">
-                        <i class="fas fa-graduation-cap"></i> Lớp
+                    <label for="department">
+                        <i class="fas fa-building"></i> Phòng ban
                     </label>
-                    <input type="text" id="className" name="class_name" placeholder="VD: CNTT-K45" required>
+                    <input type="text" id="department" name="department" placeholder="VD: Phòng Kỹ thuật" required>
                 </div>
 
                 <div class="form-group">
                     <label>
-                        <i class="fas fa-venus-mars"></i> Giới tính (tự động xác định)
+                        <i class="fas fa-venus-mars"></i> Giới tính (tự động xác định khi chụp ảnh)
                     </label>
                     <input type="text" id="detectedGender" readonly placeholder="Sẽ tự động xác định khi chụp ảnh">
                 </div>
 
                 <button type="submit" class="btn btn-primary btn-block" id="submitBtn" disabled>
-                    <i class="fas fa-save"></i> Đăng ký sinh viên
+                    <i class="fas fa-save"></i> Đăng ký nhân viên
                 </button>
             </form>
 
@@ -76,7 +76,7 @@
             <!-- Captured Image Preview -->
             <div id="capturedPreview" class="captured-preview hidden">
                 <h4><i class="fas fa-check-circle"></i> Ảnh đã chụp</h4>
-                <img id="capturedImage" alt="Captured face">
+                <img id="capturedImage" alt="Ảnh đã chụp">
             </div>
         </div>
     </div>
@@ -171,9 +171,9 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    student_code: document.getElementById('studentCode').value,
-                    name: document.getElementById('studentName').value,
-                    class_name: document.getElementById('className').value,
+                    employee_code: document.getElementById('employeeCode').value,
+                    name: document.getElementById('employeeName').value,
+                    department: document.getElementById('department').value,
                     image: capturedData
                 })
             });
@@ -209,7 +209,7 @@
         }
 
         submitBtn.disabled = false;
-        submitBtn.innerHTML = '<i class="fas fa-save"></i> Đăng ký sinh viên';
+        submitBtn.innerHTML = '<i class="fas fa-save"></i> Đăng ký nhân viên';
     });
 
     function showMessage(message, type) {

@@ -2,7 +2,7 @@
 
 {% block title %}Lịch sử điểm danh - Điểm Danh{% endblock %}
 
-{% block page_title %}📋 Lịch sử điểm danh{% endblock %}
+{% block page_title %}Lịch sử điểm danh{% endblock %}
 
 {% block content %}
 <div class="history-page">
@@ -22,14 +22,14 @@
                 <div class="filter-group flex-grow">
                     <label for="search"><i class="fas fa-search"></i> Tìm kiếm</label>
                     <input type="text" name="search" id="search" class="form-control" 
-                           placeholder="Nhập MSSV, họ tên hoặc lớp..." value="{{ search }}">
+                           placeholder="Nhập mã NV, họ tên hoặc phòng ban..." value="{{ search }}">
                 </div>
                 <div class="filter-actions">
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-search"></i> Tìm
                     </button>
                     <a href="/history" class="btn btn-secondary">
-                        <i class="fas fa-redo"></i> Reset
+                        <i class="fas fa-redo"></i> Đặt lại
                     </a>
                 </div>
             </div>
@@ -68,13 +68,13 @@
         </div>
     </div>
 
-    <!-- Class Stats -->
-    {% if stats.class_stats %}
+    <!-- Dept Stats -->
+    {% if stats.dept_stats %}
     <div class="class-stats card">
-        <h4><i class="fas fa-chart-bar"></i> Thống kê theo lớp</h4>
+        <h4><i class="fas fa-chart-bar"></i> Thống kê theo phòng ban</h4>
         <div class="class-tags">
-            {% for class_name, count in stats.class_stats.items() %}
-            <span class="class-tag">{{ class_name }}: <strong>{{ count }}</strong></span>
+            {% for dept_name, count in stats.dept_stats.items() %}
+            <span class="class-tag">{{ dept_name }}: <strong>{{ count }}</strong></span>
             {% endfor %}
         </div>
     </div>
@@ -84,12 +84,12 @@
         <div class="header-info">
             <p>Hiển thị <strong>{{ records|length }}</strong> bản ghi 
             {% if selected_date %}ngày {{ selected_date }}{% else %}trong 30 ngày gần nhất{% endif %}
-            {% if search %} - Tìm: "{{ search }}"{% endif %}</p>
+            {% if search %} - tìm: "{{ search }}"{% endif %}</p>
         </div>
         <div class="header-actions">
             <a href="/api/export/csv" class="btn btn-success">
                 <i class="fas fa-file-csv"></i> Xuất CSV
-            </a>
+            </a>    
         </div>
     </div>
 
@@ -98,9 +98,9 @@
         <table class="data-table">
             <thead>
                 <tr>
-                    <th>MSSV</th>
+                    <th>Mã NV</th>
                     <th>Họ tên</th>
-                    <th>Lớp</th>
+                    <th>Phòng ban</th>
                     <th>Thời gian</th>
                     <th>Giới tính (đăng ký)</th>
                     <th>Giới tính (phát hiện)</th>
@@ -111,9 +111,9 @@
             <tbody>
                 {% for record in records %}
                 <tr>
-                    <td><strong>{{ record.student_code }}</strong></td>
+                    <td><strong>{{ record.employee_code }}</strong></td>
                     <td>{{ record.name }}</td>
-                    <td>{{ record.class_name }}</td>
+                    <td>{{ record.department }}</td>
                     <td>{{ record.check_in_time }}</td>
                     <td>
                         <span class="gender-badge {{ 'male' if record.registered_gender == 'Nam' else 'female' }}">
@@ -131,10 +131,12 @@
                     <td>{{ record.emotion_detected or 'N/A' }}</td>
                     <td>
                         <span class="status-badge {{ record.status }}">
-                            {% if record.status == 'present' %}
-                            <i class="fas fa-check-circle"></i> Có mặt
+                            {% if record.status == 'on_time' %}
+                            <i class="fas fa-check-circle"></i> Đúng giờ
                             {% elif record.status == 'late' %}
                             <i class="fas fa-clock"></i> Muộn
+                            {% elif record.status == 'present' %}
+                            <i class="fas fa-check-circle"></i> Có mặt
                             {% else %}
                             <i class="fas fa-times-circle"></i> {{ record.status }}
                             {% endif %}

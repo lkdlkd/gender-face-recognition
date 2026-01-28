@@ -9,7 +9,7 @@ import io
 
 # Import modules
 from modules.database import (
-    add_student, get_all_students, get_student_by_id, delete_student,
+    add_employee, get_all_employees, get_employee_by_id, delete_employee,
     get_all_face_encodings, add_attendance, get_attendance_today,
     get_attendance_history, check_already_attended_today, get_attendance_stats,
     get_attendance_dates, get_attendance_stats_by_date
@@ -40,27 +40,27 @@ def index():
 
 @app.route('/register')
 def register_page():
-    """Trang đăng ký sinh viên"""
+    """Trang dang ky nhan vien"""
     return render_template('register.html')
 
 
-@app.route('/students')
-def students_page():
-    """Trang danh sách sinh viên"""
+@app.route('/employees')
+def employees_page():
+    """Trang danh sach nhan vien"""
     search = request.args.get('search', '').strip()
-    students = get_all_students(search=search if search else None)
-    return render_template('students.html', students=students, search=search)
+    employees = get_all_employees(search=search if search else None)
+    return render_template('employees.html', employees=employees, search=search)
 
 
 @app.route('/attendance')
 def attendance_page():
-    """Trang điểm danh"""
+    """Trang diem danh"""
     return render_template('attendance.html')
 
 
 @app.route('/history')
 def history_page():
-    """Trang lịch sử điểm danh"""
+    """Trang lich su diem danh"""
     search = request.args.get('search', '').strip()
     date = request.args.get('date', '').strip()
     
@@ -86,17 +86,17 @@ def history_page():
 
 @app.route('/api/register', methods=['POST'])
 def api_register():
-    """API đăng ký sinh viên mới"""
+    """API dang ky nhan vien moi"""
     try:
         data = request.get_json()
         
-        student_code = data.get('student_code', '').strip()
+        employee_code = data.get('employee_code', '').strip()
         name = data.get('name', '').strip()
-        class_name = data.get('class_name', '').strip()
+        department = data.get('department', '').strip()
         image_data = data.get('image')  # Base64 encoded image
         
-        if not all([student_code, name, class_name, image_data]):
-            return jsonify({'success': False, 'message': 'Vui lòng điền đầy đủ thông tin và chụp ảnh khuôn mặt'})
+        if not all([employee_code, name, department, image_data]):
+            return jsonify({'success': False, 'message': 'Vui long dien day du thong tin va chup anh khuon mat'})
         
         # Decode base64 image
         image_bytes = base64.b64decode(image_data.split(',')[1])
@@ -104,18 +104,18 @@ def api_register():
         image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         
         if image is None:
-            return jsonify({'success': False, 'message': 'Không thể đọc ảnh'})
+            return jsonify({'success': False, 'message': 'Khong the doc anh'})
         
-        # Flip ảnh từ webcam (do webcam thường bị mirror)
+        # Flip anh tu webcam (do webcam thuong bi mirror)
         image = cv2.flip(image, 1)
         
         # Detect face
         faces = detect_faces(image)
         if len(faces) == 0:
-            return jsonify({'success': False, 'message': 'Không phát hiện khuôn mặt trong ảnh'})
+            return jsonify({'success': False, 'message': 'Khong phat hien khuon mat trong anh'})
         
         if len(faces) > 1:
-            return jsonify({'success': False, 'message': 'Phát hiện nhiều khuôn mặt. Vui lòng chỉ để 1 người trong khung hình'})
+            return jsonify({'success': False, 'message': 'Phat hien nhieu khuon mat. Vui long chi de 1 nguoi trong khung hinh'})
         
         # Get face region
         x, y, w, h = faces[0]
@@ -128,43 +128,43 @@ def api_register():
         face_encoding = encode_face(face_img)
         
         # Save face image
-        filename = f"{student_code}_{datetime.now().strftime('%Y%m%d%H%M%S')}.jpg"
+        filename = f"{employee_code}_{datetime.now().strftime('%Y%m%d%H%M%S')}.jpg"
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         cv2.imwrite(filepath, face_img)
         
         # Save to database
-        student_id = add_student(
-            student_code=student_code,
+        employee_id = add_employee(
+            employee_code=employee_code,
             name=name,
-            class_name=class_name,
+            department=department,
             gender=gender,
             face_encoding=face_encoding,
             face_image=filename
         )
         
-        if student_id:
+        if employee_id:
             return jsonify({
                 'success': True,
-                'message': f'Đăng ký thành công! Giới tính: {gender}',
-                'student_id': student_id,
+                'message': f'Dang ky thanh cong! Gioi tinh: {gender}',
+                'employee_id': employee_id,
                 'gender': gender
             })
         else:
-            return jsonify({'success': False, 'message': 'Mã sinh viên đã tồn tại'})
+            return jsonify({'success': False, 'message': 'Ma nhan vien da ton tai'})
             
     except Exception as e:
-        return jsonify({'success': False, 'message': f'Lỗi: {str(e)}'})
+        return jsonify({'success': False, 'message': f'Loi: {str(e)}'})
 
 
 @app.route('/api/recognize', methods=['POST'])
 def api_recognize():
-    """API nhận diện khuôn mặt để điểm danh"""
+    """API nhan dien khuon mat de diem danh"""
     try:
         data = request.get_json()
         image_data = data.get('image')
         
         if not image_data:
-            return jsonify({'success': False, 'message': 'Không có ảnh'})
+            return jsonify({'success': False, 'message': 'Khong co anh'})
         
         # Decode base64 image
         image_bytes = base64.b64decode(image_data.split(',')[1])
@@ -172,18 +172,18 @@ def api_recognize():
         image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         
         if image is None:
-            return jsonify({'success': False, 'message': 'Không thể đọc ảnh'})
+            return jsonify({'success': False, 'message': 'Khong the doc anh'})
         
-        # Flip ảnh từ webcam (do webcam thường bị mirror)
+        # Flip anh tu webcam (do webcam thuong bi mirror)
         image = cv2.flip(image, 1)
         
-        # Lưu width để flip tọa độ bbox sau này
+        # Luu width de flip toa do bbox sau nay
         img_width = image.shape[1]
         
         # Detect faces
         faces = detect_faces(image)
         if len(faces) == 0:
-            return jsonify({'success': False, 'message': 'Không phát hiện khuôn mặt'})
+            return jsonify({'success': False, 'message': 'Khong phat hien khuon mat'})
         
         results = []
         known_faces = get_all_face_encodings()
@@ -195,7 +195,7 @@ def api_recognize():
             test_encoding = encode_face(face_img)
             
             # Find match
-            matched_student, confidence = find_best_match(test_encoding, known_faces, threshold=0.5)
+            matched_employee, confidence = find_best_match(test_encoding, known_faces, threshold=0.5)
             
             # Predict gender
             gender, gender_conf = predict_gender(face_img)
@@ -203,31 +203,30 @@ def api_recognize():
             # Predict emotion
             emotion, emoji, emotion_conf = predict_emotion(face_img)
             
-            # Flip tọa độ x để khớp với video gốc trên browser (vì đã flip ảnh khi xử lý)
+            # Flip toa do x de khop voi video goc tren browser (vi da flip anh khi xu ly)
             flipped_x = img_width - x - w
             
-            if matched_student:
+            if matched_employee:
                 # Check if already attended today
-                already_attended = check_already_attended_today(matched_student['id'])
+                already_attended = check_already_attended_today(matched_employee['id'])
                 
                 if not already_attended:
-                    # Add attendance record
+                    # Add attendance record - status tu dong xac dinh (on_time/late)
                     add_attendance(
-                        student_id=matched_student['id'],
+                        employee_id=matched_employee['id'],
                         gender_detected=gender,
                         emotion_detected=emotion,
-                        confidence=confidence,
-                        status='present'
+                        confidence=confidence
                     )
-                    status = 'Đã điểm danh thành công!'
+                    status = 'Da diem danh thanh cong!'
                 else:
-                    status = 'Đã điểm danh hôm nay rồi'
+                    status = 'Da diem danh hom nay roi'
                 
                 results.append({
                     'found': True,
-                    'student_code': matched_student['student_code'],
-                    'name': matched_student['name'],
-                    'class_name': matched_student['class_name'],
+                    'employee_code': matched_employee['employee_code'],
+                    'name': matched_employee['name'],
+                    'department': matched_employee['department'],
                     'gender': gender,
                     'emotion': f"{emoji} {emotion}",
                     'confidence': round(confidence * 100, 1),
@@ -238,7 +237,7 @@ def api_recognize():
             else:
                 results.append({
                     'found': False,
-                    'message': 'Không nhận diện được',
+                    'message': 'Khong nhan dien duoc',
                     'gender': gender,
                     'emotion': f"{emoji} {emotion}",
                     'bbox': {'x': int(flipped_x), 'y': int(y), 'w': int(w), 'h': int(h)}
@@ -247,33 +246,33 @@ def api_recognize():
         return jsonify({'success': True, 'faces': results})
         
     except Exception as e:
-        return jsonify({'success': False, 'message': f'Lỗi: {str(e)}'})
+        return jsonify({'success': False, 'message': f'Loi: {str(e)}'})
 
 
-@app.route('/api/students/<int:student_id>', methods=['DELETE'])
-def api_delete_student(student_id):
-    """API xóa sinh viên"""
+@app.route('/api/employees/<int:employee_id>', methods=['DELETE'])
+def api_delete_employee(employee_id):
+    """API xoa nhan vien"""
     try:
-        success = delete_student(student_id)
+        success = delete_employee(employee_id)
         if success:
-            return jsonify({'success': True, 'message': 'Đã xóa sinh viên'})
+            return jsonify({'success': True, 'message': 'Da xoa nhan vien'})
         else:
-            return jsonify({'success': False, 'message': 'Không tìm thấy sinh viên'})
+            return jsonify({'success': False, 'message': 'Khong tim thay nhan vien'})
     except Exception as e:
-        return jsonify({'success': False, 'message': f'Lỗi: {str(e)}'})
+        return jsonify({'success': False, 'message': f'Loi: {str(e)}'})
 
 
 @app.route('/api/attendance/today')
 def api_attendance_today():
-    """API lấy danh sách điểm danh hôm nay"""
+    """API lay danh sach diem danh hom nay"""
     records = get_attendance_today()
     data = []
     for record in records:
         data.append({
             'id': record['id'],
-            'student_code': record['student_code'],
+            'employee_code': record['employee_code'],
             'name': record['name'],
-            'class_name': record['class_name'],
+            'department': record['department'],
             'check_in_time': record['check_in_time'],
             'gender_detected': record['gender_detected'],
             'emotion_detected': record['emotion_detected'],
@@ -284,20 +283,20 @@ def api_attendance_today():
 
 @app.route('/api/stats')
 def api_stats():
-    """API lấy thống kê"""
+    """API lay thong ke"""
     stats = get_attendance_stats()
     return jsonify({'success': True, 'stats': stats})
 
 
 @app.route('/api/export/csv')
 def api_export_csv():
-    """Xuất báo cáo CSV"""
+    """Xuat bao cao CSV"""
     records = get_attendance_history(days=30)
     
     # Create CSV content
-    csv_lines = ['MSSV,Họ tên,Lớp,Thời gian,Giới tính,Cảm xúc,Trạng thái']
+    csv_lines = ['Ma NV,Ho ten,Phong ban,Thoi gian,Gioi tinh,Cam xuc,Trang thai']
     for record in records:
-        csv_lines.append(f"{record['student_code']},{record['name']},{record['class_name']},{record['check_in_time']},{record['gender_detected']},{record['emotion_detected']},{record['status']}")
+        csv_lines.append(f"{record['employee_code']},{record['name']},{record['department']},{record['check_in_time']},{record['gender_detected']},{record['emotion_detected']},{record['status']}")
     
     csv_content = '\n'.join(csv_lines)
     
@@ -316,10 +315,10 @@ def api_export_csv():
 
 if __name__ == '__main__':
     print("\n" + "="*50)
-    print("🥉 HỆ THỐNG ĐIỂM DANH SINH VIÊN")
-    print("📌 Nhận diện khuôn mặt + Giới tính + Cảm xúc")
+    print("HE THONG DIEM DANH NHAN VIEN")
+    print("Nhan dien khuon mat + Gioi tinh + Cam xuc")
     print("="*50)
-    print("\n🌐 Mở trình duyệt tại: http://localhost:5000")
-    print("📌 Nhấn Ctrl+C để dừng server\n")
+    print("\nMo trinh duyet tai: http://localhost:5000")
+    print("Nhan Ctrl+C de dung server\n")
     
     app.run(debug=True, host='0.0.0.0', port=5000)

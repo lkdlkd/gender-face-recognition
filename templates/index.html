@@ -1,8 +1,8 @@
 {% extends 'base.html' %}
 
-{% block title %}Trang chủ - Điểm Danh Sinh Viên{% endblock %}
+{% block title %}Trang chủ - Điểm Danh Nhân Viên{% endblock %}
 
-{% block page_title %}🥉 Hệ Thống Điểm Danh Sinh Viên{% endblock %}
+{% block page_title %}Hệ Thống Điểm Danh Nhân Viên{% endblock %}
 
 {% block content %}
 <div class="dashboard">
@@ -11,6 +11,10 @@
         <div class="welcome-content">
             <h2>Chào mừng đến với Hệ thống Điểm Danh</h2>
             <p>Nhận diện khuôn mặt + Phân tích giới tính + Cảm xúc</p>
+            <p class="time-info">
+                <i class="fas fa-clock"></i> Giờ VN: <span id="vnTime">--:--:--</span>
+                | <i class="fas fa-business-time"></i> Giờ làm việc: <strong>09:30</strong>
+            </p>
         </div>
         <div class="welcome-icon">
             <i class="fas fa-face-smile"></i>
@@ -24,8 +28,8 @@
                 <i class="fas fa-users"></i>
             </div>
             <div class="stat-info">
-                <h3>{{ stats.total_students }}</h3>
-                <p>Tổng sinh viên</p>
+                <h3>{{ stats.total_employees }}</h3>
+                <p>Tổng nhân viên</p>
             </div>
         </div>
 
@@ -34,8 +38,18 @@
                 <i class="fas fa-check-circle"></i>
             </div>
             <div class="stat-info">
-                <h3>{{ stats.attended_today }}</h3>
-                <p>Đã điểm danh hôm nay</p>
+                <h3>{{ stats.on_time_count }}</h3>
+                <p>Đúng giờ hôm nay</p>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon red">
+                <i class="fas fa-clock"></i>
+            </div>
+            <div class="stat-info">
+                <h3>{{ stats.late_count }}</h3>
+                <p>Muộn hôm nay</p>
             </div>
         </div>
 
@@ -48,22 +62,6 @@
                 <p>Tỷ lệ điểm danh</p>
             </div>
         </div>
-
-        <div class="stat-card">
-            <div class="stat-icon orange">
-                <i class="fas fa-venus-mars"></i>
-            </div>
-            <div class="stat-info">
-                <h3>
-                    {% if stats.gender_stats %}
-                    {{ stats.gender_stats.get('Nam', 0) }}♂ / {{ stats.gender_stats.get('Nữ', 0) }}♀
-                    {% else %}
-                    0♂ / 0♀
-                    {% endif %}
-                </h3>
-                <p>Nam / Nữ</p>
-            </div>
-        </div>
     </div>
 
     <!-- Quick Actions -->
@@ -72,15 +70,15 @@
         <div class="action-buttons">
             <a href="{{ url_for('register_page') }}" class="action-btn primary">
                 <i class="fas fa-user-plus"></i>
-                <span>Đăng ký sinh viên mới</span>
+                <span>Đăng ký nhân viên mới</span>
             </a>
             <a href="{{ url_for('attendance_page') }}" class="action-btn success">
                 <i class="fas fa-camera"></i>
                 <span>Bắt đầu điểm danh</span>
             </a>
-            <a href="{{ url_for('students_page') }}" class="action-btn info">
+            <a href="{{ url_for('employees_page') }}" class="action-btn info">
                 <i class="fas fa-list"></i>
-                <span>Xem danh sách SV</span>
+                <span>Xem danh sách NV</span>
             </a>
             <a href="/api/export/csv" class="action-btn warning">
                 <i class="fas fa-file-csv"></i>
@@ -88,42 +86,17 @@
             </a>
         </div>
     </div>
-
-    <!-- Features -->
-    <div class="features-section">
-        <h3><i class="fas fa-star"></i> Tính năng hệ thống</h3>
-        <div class="features-grid">
-            <div class="feature-card">
-                <div class="feature-icon">📸</div>
-                <h4>Camera Realtime</h4>
-                <p>Sử dụng webcam để điểm danh trực tiếp</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">🔍</div>
-                <h4>Face Recognition</h4>
-                <p>Nhận diện và xác thực khuôn mặt sinh viên</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">👤</div>
-                <h4>Gender Detection</h4>
-                <p>Tự động xác định giới tính bằng AI</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">😊</div>
-                <h4>Emotion Analysis</h4>
-                <p>Phân tích cảm xúc khuôn mặt</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">💾</div>
-                <h4>Lưu CSDL</h4>
-                <p>Lưu trữ lịch sử điểm danh đầy đủ</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">📊</div>
-                <h4>Báo cáo</h4>
-                <p>Xuất báo cáo thống kê theo ngày/tuần</p>
-            </div>
-        </div>
-    </div>
 </div>
+
+<script>
+function updateVNTime() {
+    const now = new Date();
+    const h = now.getHours().toString().padStart(2, '0');
+    const m = now.getMinutes().toString().padStart(2, '0');
+    const s = now.getSeconds().toString().padStart(2, '0');
+    document.getElementById('vnTime').textContent = `${h}:${m}:${s}`;
+}
+setInterval(updateVNTime, 1000);
+updateVNTime();
+</script>
 {% endblock %}

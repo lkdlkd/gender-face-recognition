@@ -1,40 +1,40 @@
-# 🥉 HỆ THỐNG ĐIỂM DANH SINH VIÊN BẰNG NHẬN DIỆN KHUÔN MẶT + GIỚI TÍNH
+# HE THONG DIEM DANH NHAN VIEN BANG NHAN DIEN KHUON MAT + GIOI TINH
 
-## 📌 Tên đề tài
-**Xây dựng hệ thống điểm danh sinh viên bằng nhận diện khuôn mặt kết hợp phân tích giới tính**
+## Ten de tai
+**Xay dung he thong diem danh nhan vien bang nhan dien khuon mat ket hop phan tich gioi tinh**
 
-Hệ thống web điểm danh tự động, gắn liền với thực tế trường học.
-
----
-
-## 🎯 Tính năng chính
-
-### 🎓 Quản lý sinh viên
-- ✅ Đăng ký sinh viên mới (MSSV, họ tên, lớp)
-- ✅ Chụp và lưu ảnh khuôn mặt
-- ✅ Tự động xác định giới tính bằng AI
-- ✅ Xem danh sách sinh viên
-- ✅ Xóa sinh viên
-
-### 📸 Điểm danh realtime
-- ✅ Camera webcam realtime
-- ✅ Phát hiện khuôn mặt (Face Detection)
-- ✅ Nhận diện sinh viên (Face Recognition)
-- ✅ Phân tích giới tính (Gender Classification)
-- ✅ Phân tích cảm xúc (Emotion Recognition)
-- ✅ Chế độ tự động điểm danh
-
-### 📊 Báo cáo
-- ✅ Lịch sử điểm danh
-- ✅ Thống kê theo ngày/tuần
-- ✅ Thống kê theo giới tính
-- ✅ Xuất báo cáo CSV
+He thong web diem danh tu dong, gan lien voi thuc te doanh nghiep.
 
 ---
 
-## ⚙️ Công nghệ sử dụng
+## Tinh nang chinh
 
-| Thành phần | Công nghệ |
+### Quan ly nhan vien
+- Dang ky nhan vien moi (Ma NV, ho ten, phong ban)
+- Chup va luu anh khuon mat
+- Tu dong xac dinh gioi tinh bang AI
+- Xem danh sach nhan vien
+- Xoa nhan vien
+
+### Diem danh realtime
+- Camera webcam realtime
+- Phat hien khuon mat (Face Detection)
+- Nhan dien nhan vien (Face Recognition)
+- Phan tich gioi tinh (Gender Classification)
+- Phan tich cam xuc (Emotion Recognition)
+- Che do tu dong diem danh
+
+### Bao cao
+- Lich su diem danh
+- Thong ke theo ngay/tuan
+- Thong ke theo gioi tinh
+- Xuat bao cao CSV
+
+---
+
+## Cong nghe su dung
+
+| Thanh phan | Cong nghe |
 |------------|-----------|
 | Backend | Python Flask |
 | AI/ML | OpenCV DNN, TensorFlow/Keras |
@@ -47,20 +47,20 @@ Hệ thống web điểm danh tự động, gắn liền với thực tế trư�
 
 ---
 
-## 🛠️ Cài đặt
+## Cai dat
 
-### 1. Yêu cầu hệ thống
+### 1. Yeu cau he thong
 - Python 3.8+
 - Webcam
 - RAM >= 4GB
 
-### 2. Cài đặt thư viện
+### 2. Cai dat thu vien
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Cấu trúc thư mục
+### 3. Cau truc thu muc
 
 ```
 gender-face-recognition/
@@ -87,115 +87,115 @@ gender-face-recognition/
 └── templates/                  # HTML templates
     ├── base.html
     ├── index.html              # Dashboard
-    ├── register.html           # Đăng ký sinh viên
-    ├── attendance.html         # Điểm danh
-    ├── students.html           # Danh sách SV
-    └── history.html            # Lịch sử
+    ├── register.html           # Dang ky nhan vien
+    ├── attendance.html         # Diem danh
+    ├── employees.html          # Danh sach NV
+    └── history.html            # Lich su
 ```
 
 ---
 
-## 🚀 Sử dụng
+## Su dung
 
-### Chạy chương trình
+### Chay chuong trinh
 
 ```bash
 python app.py
 ```
 
-### Truy cập website
+### Truy cap website
 
-Mở trình duyệt tại: **http://localhost:5000**
+Mo trinh duyet tai: **http://localhost:5000**
 
-### Hướng dẫn sử dụng
+### Huong dan su dung
 
-#### 1️⃣ Đăng ký sinh viên
-1. Vào menu "Đăng ký SV"
-2. Nhập MSSV, họ tên, lớp
-3. Bật camera và chụp ảnh khuôn mặt
-4. Hệ thống tự động xác định giới tính
-5. Nhấn "Đăng ký"
+#### 1. Dang ky nhan vien
+1. Vao menu "Dang ky NV"
+2. Nhap Ma NV, ho ten, phong ban
+3. Bat camera va chup anh khuon mat
+4. He thong tu dong xac dinh gioi tinh
+5. Nhan "Dang ky"
 
-#### 2️⃣ Điểm danh
-1. Vào menu "Điểm danh"
-2. Bật camera
-3. Nhấn "Điểm danh" hoặc bật chế độ tự động
-4. Hệ thống nhận diện và ghi điểm danh
+#### 2. Diem danh
+1. Vao menu "Diem danh"
+2. Bat camera
+3. Nhan "Diem danh" hoac bat che do tu dong
+4. He thong nhan dien va ghi diem danh
 
-#### 3️⃣ Xem lịch sử
-1. Vào menu "Lịch sử"
-2. Xem danh sách điểm danh
-3. Xuất CSV nếu cần
-
----
-
-## 📊 Kết quả hiển thị
-
-### Trên camera:
-- 📦 Bounding box quanh khuôn mặt
-- 🏷️ Tên sinh viên (hoặc "Unknown")
-- ♂️♀️ Giới tính
-- 😊 Cảm xúc
-
-### Thông tin điểm danh:
-- MSSV, họ tên, lớp
-- Thời gian điểm danh
-- Giới tính đăng ký vs phát hiện
-- Cảm xúc
-- Trạng thái (Có mặt / Muộn)
+#### 3. Xem lich su
+1. Vao menu "Lich su"
+2. Xem danh sach diem danh
+3. Xuat CSV neu can
 
 ---
 
-## 🧪 Quy trình hoạt động
+## Ket qua hien thi
+
+### Tren camera:
+- Bounding box quanh khuon mat
+- Ten nhan vien (hoac "Unknown")
+- Gioi tinh
+- Cam xuc
+
+### Thong tin diem danh:
+- Ma NV, ho ten, phong ban
+- Thoi gian diem danh
+- Gioi tinh dang ky vs phat hien
+- Cam xuc
+- Trang thai (Co mat / Muon)
+
+---
+
+## Quy trinh hoat dong
 
 ```
-1️⃣ ĐĂNG KÝ
-   └─> Nhập thông tin
-   └─> Chụp ảnh
-   └─> AI xác định giới tính
-   └─> Lưu face encoding vào DB
+1. DANG KY
+   --> Nhap thong tin
+   --> Chup anh
+   --> AI xac dinh gioi tinh
+   --> Luu face encoding vao DB
 
-2️⃣ ĐIỂM DANH
-   └─> Mở camera
-   └─> Detect khuôn mặt
-   └─> So khớp với DB
-   └─> Nhận diện giới tính + cảm xúc
-   └─> Ghi điểm danh
+2. DIEM DANH
+   --> Mo camera
+   --> Detect khuon mat
+   --> So khop voi DB
+   --> Nhan dien gioi tinh + cam xuc
+   --> Ghi diem danh
 
-3️⃣ BÁO CÁO
-   └─> Thống kê %
-   └─> Xuất CSV
+3. BAO CAO
+   --> Thong ke %
+   --> Xuat CSV
 ```
 
 ---
 
-## 📚 Phương pháp AI
+## Phuong phap AI
 
 ### 1. Face Detection
-- **Phương pháp:** Haar Cascade Classifier
-- **Mô tả:** Phát hiện vị trí khuôn mặt trong ảnh
+- **Phuong phap:** Haar Cascade Classifier
+- **Mo ta:** Phat hien vi tri khuon mat trong anh
 
 ### 2. Face Recognition
-- **Phương pháp:** Histogram flattening + Cosine similarity
-- **Mô tả:** So khớp face encoding với database
+- **Phuong phap:** Histogram flattening + Cosine similarity
+- **Mo ta:** So khop face encoding voi database
 
 ### 3. Gender Classification
-- **Phương pháp:** CNN (Caffe Model)
-- **Output:** Nam / Nữ
+- **Phuong phap:** CNN (Caffe Model)
+- **Output:** Nam / Nu
 
 ### 4. Emotion Recognition
-- **Phương pháp:** Mini-Xception CNN
+- **Phuong phap:** Mini-Xception CNN
 - **Dataset:** FER-2013
-- **Output:** 7 cảm xúc (Vui vẻ, Buồn bã, Tức giận, Sợ hãi, Ngạc nhiên, Ghê tởm, Bình thường)
+- **Output:** 7 cam xuc (Vui ve, Buon ba, Tuc gian, So hai, Ngac nhien, Ghe tom, Binh thuong)
 
 ---
 
-## 👨‍💻 Tác giả
+## Tac gia
 
-Đề tài môn học: **Xử lý ảnh**
+De tai mon hoc: **Xu ly anh**
 
 ---
 
-## 📝 License
+## License
 
 MIT License
