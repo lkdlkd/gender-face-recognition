@@ -103,7 +103,6 @@
                     <th>Phòng ban</th>
                     <th>Thời gian</th>
                     <th>Giới tính (đăng ký)</th>
-                    <th>Giới tính (phát hiện)</th>
                     <th>Cảm xúc</th>
                     <th>Trạng thái</th>
                 </tr>
@@ -119,14 +118,6 @@
                         <span class="gender-badge {{ 'male' if record.registered_gender == 'Nam' else 'female' }}">
                             {{ record.registered_gender }}
                         </span>
-                    </td>
-                    <td>
-                        <span class="gender-badge {{ 'male' if record.gender_detected == 'Nam' else 'female' }}">
-                            {{ record.gender_detected }}
-                        </span>
-                        {% if record.registered_gender != record.gender_detected %}
-                        <i class="fas fa-exclamation-triangle warning-icon" title="Không khớp giới tính đăng ký"></i>
-                        {% endif %}
                     </td>
                     <td>{{ record.emotion_detected or 'N/A' }}</td>
                     <td>
