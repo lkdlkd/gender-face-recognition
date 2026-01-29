@@ -121,7 +121,7 @@
             stopCameraBtn.disabled = false;
             recognizeBtn.disabled = false;
         } catch (err) {
-            alert('Khong the truy cap camera: ' + err.message);
+            alert('Không thể truy cập camera: ' + err.message);
         }
     });
 
@@ -152,7 +152,7 @@
         if (!stream) return;
 
         recognizeBtn.disabled = true;
-        recognizeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Dang xu ly...';
+        recognizeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
 
         // Capture frame
         const canvas = document.createElement('canvas');
@@ -181,7 +181,7 @@
                 recognitionResult.innerHTML = `
                     <div class="result-card error">
                         <i class="fas fa-exclamation-circle"></i>
-                        <p>${data.message || 'Khong phat hien khuon mat'}</p>
+                        <p>${data.message || 'Không phát hiện khuôn mặt'}</p>
                     </div>
                 `;
             }
@@ -189,13 +189,13 @@
             recognitionResult.innerHTML = `
                 <div class="result-card error">
                     <i class="fas fa-exclamation-triangle"></i>
-                    <p>Loi: ${err.message}</p>
+                    <p>Lỗi: ${err.message}</p>
                 </div>
             `;
         }
 
         recognizeBtn.disabled = false;
-        recognizeBtn.innerHTML = '<i class="fas fa-search"></i> Diem danh';
+        recognizeBtn.innerHTML = '<i class="fas fa-search"></i> Điểm danh';
     }
 
     recognizeBtn.addEventListener('click', recognizeFace);
@@ -221,7 +221,7 @@
                             <p><i class="fas fa-building"></i> ${face.department}</p>
                             <p><i class="fas fa-venus-mars"></i> ${face.gender}</p>
                             <p><i class="fas fa-face-smile"></i> ${face.emotion}</p>
-                            <p><i class="fas fa-percentage"></i> Do tin cay: ${face.confidence}%</p>
+                            <p><i class="fas fa-percentage"></i> Độ tin cậy: ${face.confidence}%</p>
                         </div>
                     </div>
                 `;
@@ -230,10 +230,10 @@
                     <div class="result-card unknown">
                         <div class="result-header">
                             <i class="fas fa-question-circle"></i>
-                            <span class="status-badge">Khong nhan dien duoc</span>
+                            <span class="status-badge">Không nhận diện được</span>
                         </div>
                         <div class="result-body">
-                            <h4>Nhan vien khong xac dinh</h4>
+                            <h4>Nhân viên không xác định</h4>
                             <p><i class="fas fa-venus-mars"></i> ${face.gender}</p>
                             <p><i class="fas fa-face-smile"></i> ${face.emotion}</p>
                         </div>
@@ -256,7 +256,7 @@
             ctx.strokeRect(bbox.x, bbox.y, bbox.w, bbox.h);
 
             // Draw label background
-            const label = face.found ? face.name : 'Unknown';
+            const label = face.found ? face.name : 'Không xác định';
             ctx.font = 'bold 16px Inter';
             const textWidth = ctx.measureText(label).width;
 
@@ -297,11 +297,11 @@
         const workStartMinutes = 9 * 60 + 30; // 09:30
         
         if (totalMinutes < workStartMinutes) {
-            statusLabel.textContent = 'Dung gio';
+            statusLabel.textContent = 'Đúng giờ';
             statusIndicator.className = 'schedule-item on-time';
         } else {
             const lateMinutes = totalMinutes - workStartMinutes;
-            statusLabel.textContent = `Muon ${lateMinutes} phut`;
+            statusLabel.textContent = `Muộn ${lateMinutes} phút`;
             statusIndicator.className = 'schedule-item late';
         }
     }
@@ -325,7 +325,7 @@
                 let html = '<ul>';
                 data.records.slice(0, 10).forEach(record => {
                     const statusClass = record.status === 'late' ? 'late' : 'on-time';
-                    const statusText = record.status === 'late' ? 'Muon' : 'Dung gio';
+                    const statusText = record.status === 'late' ? 'Muộn' : 'Đúng giờ';
                     html += `
                         <li>
                             <span class="employee-info">
@@ -341,10 +341,10 @@
                 html += '</ul>';
                 todayList.innerHTML = html;
             } else {
-                todayList.innerHTML = '<p class="empty">Chua co ai diem danh hom nay</p>';
+                todayList.innerHTML = '<p class="empty">Chưa có ai điểm danh hôm nay</p>';
             }
         } catch (err) {
-            todayList.innerHTML = '<p class="error">Loi tai du lieu</p>';
+            todayList.innerHTML = '<p class="error">Lỗi tải dữ liệu</p>';
         }
     }
 

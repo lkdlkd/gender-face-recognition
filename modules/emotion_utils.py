@@ -25,7 +25,7 @@ EMOTION_LABELS = [
 ]
 
 EMOTION_EMOJIS = {
-    "ức giận": "Angry",
+    "Tức giận": "Angry",
     "Ghê tởm": "Disgust", 
     "Sợ hãi": "Fear",
     "Vui vẻ": "Happy",
