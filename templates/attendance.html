@@ -162,11 +162,22 @@
         const imageData = canvas.toDataURL('image/jpeg', 0.9);
 
         try {
+            // Thêm timeout 30 giây để tránh treo
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000);
+
             const response = await fetch('/api/recognize', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ image: imageData })
+                body: JSON.stringify({ image: imageData }),
+                signal: controller.signal
             });
+
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                throw new Error(`Server trả về lỗi: ${response.status} ${response.statusText}`);
+            }
 
             const data = await response.json();
 
@@ -186,10 +197,19 @@
                 `;
             }
         } catch (err) {
+            let errorMsg = err.message;
+            
+            // Xử lý các lỗi phổ biến
+            if (err.name === 'AbortError') {
+                errorMsg = 'Quá thời gian chờ (30s). Server có thể đang bận hoặc chưa chạy.';
+            } else if (err.message === 'Failed to fetch') {
+                errorMsg = 'Không thể kết nối server. Hãy kiểm tra:<br>1. Server Flask đã chạy chưa?<br>2. Mở terminal chạy: python app.py';
+            }
+            
             recognitionResult.innerHTML = `
                 <div class="result-card error">
                     <i class="fas fa-exclamation-triangle"></i>
-                    <p>Lỗi: ${err.message}</p>
+                    <p>${errorMsg}</p>
                 </div>
             `;
         }
@@ -219,7 +239,9 @@
                             <h4>${face.name}</h4>
                             <p><i class="fas fa-id-card"></i> ${face.employee_code}</p>
                             <p><i class="fas fa-building"></i> ${face.department}</p>
+                            <p><i class="fas fa-venus-mars"></i> ${face.gender}</p>
                             <p><i class="fas fa-face-smile"></i> ${face.emotion}</p>
+
                             <p><i class="fas fa-percentage"></i> Độ tin cậy: ${face.confidence}%</p>
                         </div>
                     </div>
@@ -285,15 +307,15 @@
         const h = now.getHours();
         const m = now.getMinutes();
         const s = now.getSeconds();
-        document.getElementById('currentVNTime').textContent = 
-            `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
-        
+        document.getElementById('currentVNTime').textContent =
+            `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+
         // Update status indicator
         const statusIndicator = document.getElementById('statusIndicator');
         const statusLabel = document.getElementById('statusLabel');
         const totalMinutes = h * 60 + m;
         const workStartMinutes = 9 * 60 + 30; // 09:30
-        
+
         if (totalMinutes < workStartMinutes) {
             statusLabel.textContent = 'Đúng giờ';
             statusIndicator.className = 'schedule-item on-time';

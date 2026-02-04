@@ -167,6 +167,10 @@
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
 
         try {
+            // Thêm timeout 30 giây
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000);
+
             const response = await fetch('/api/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -175,8 +179,15 @@
                     name: document.getElementById('employeeName').value,
                     department: document.getElementById('department').value,
                     image: capturedData
-                })
+                }),
+                signal: controller.signal
             });
+
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                throw new Error(`Server trả về lỗi: ${response.status}`);
+            }
 
             const data = await response.json();
 
@@ -205,7 +216,15 @@
                 showMessage(data.message, 'error');
             }
         } catch (err) {
-            showMessage('Lỗi kết nối: ' + err.message, 'error');
+            let errorMsg = err.message;
+            
+            if (err.name === 'AbortError') {
+                errorMsg = 'Quá thời gian chờ (30s). Server đang bận hoặc chưa chạy.';
+            } else if (err.message === 'Failed to fetch') {
+                errorMsg = 'Không thể kết nối server. Hãy kiểm tra server Flask đã chạy chưa (python app.py)';
+            }
+            
+            showMessage('Lỗi: ' + errorMsg, 'error');
         }
 
         submitBtn.disabled = false;

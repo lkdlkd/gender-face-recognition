@@ -2,33 +2,63 @@
 Face Recognition & Gender Classification Module
 ================================================
 
-BUOC 1: TIM KHUON MAT (Face Detection)
-- Uu tien: face_recognition (dlib HOG) - Chinh xac nhat
-- Du phong: DNN SSD ResNet-10
-- Cuoi cung: Haar Cascade
+BƯỚC 1: TÌM KHUÔN MẶT (Face Detection)
+- Ưu tiên: face_recognition (dlib HOG) - Chính xác nhất
+- Dự phòng: DNN SSD ResNet-10
+- Cuối cùng: Haar Cascade
 
-BUOC 2: TAO VECTOR 128 SO (Face Encoding)
-- Su dung: dlib ResNet-34 (da train tren 3 trieu anh)
-- Output: Vector 128 chieu - "van tay" khuon mat
+BƯỚC 2: TẠO VECTOR 128 SỐ (Face Encoding)
+- Sử dụng: dlib ResNet-34 (đã train trên 3 triệu ảnh)
+- Output: Vector 128 chiều - "vân tay" khuôn mặt
 
-BUOC 3: SO SANH VA NHAN DANG
-- Khoang cach Euclidean < 0.6 = Cung nguoi
-- Do tin cay = (1 - khoang cach) x 100%
+BƯỚC 3: SO SÁNH VÀ NHẬN DẠNG
+- Khoảng cách Euclidean < 0.6 = Cùng người
+- Độ tin cậy = (1 - khoảng cách) x 100%
 
-BUOC 4: NHAN DANG GIOI TINH
-- Uu tien: DeepFace (VGG-Face CNN) - ~97% accuracy
-- Du phong: Caffe model
+BƯỚC 4: NHẬN DẠNG GIỚI TÍNH
+- Ưu tiên: DeepFace (VGG-Face CNN) - ~97% accuracy
+- Dự phòng: Caffe model
+
+BƯỚC 5: XÁC THỰC VÀ KIỂM TRA (Validation)
+- Kiểm tra tính hợp lệ của ảnh đầu vào
+- Kiểm tra chất lượng ảnh (độ sáng, tương phản, độ mờ)
+- Xác thực encoding vector (128 chiều, giá trị hợp lệ)
+- Ngưỡng tin cậy tối thiểu cho tất cả operations
 """
 
 import cv2
 import numpy as np
 import os
+from typing import Tuple, List, Dict, Optional, Any, Union
 
 # ===============================
 # Paths & Config
 # ===============================
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL_DIR = os.path.join(BASE_DIR, "models")
+
+# ===============================
+# Validation Configuration
+# ===============================
+# Kích thước ảnh tối thiểu
+MIN_IMAGE_SIZE = 20
+MIN_FACE_SIZE = 30
+
+# Ngưỡng tin cậy
+MIN_DETECTION_CONFIDENCE = 0.5
+MIN_GENDER_CONFIDENCE = 0.55
+MIN_MATCH_CONFIDENCE = 0.50
+
+# Encoding validation
+EXPECTED_ENCODING_LENGTH = 128
+ENCODING_VALUE_MIN = -1.0
+ENCODING_VALUE_MAX = 1.0
+
+# Image quality thresholds
+MIN_BRIGHTNESS = 30
+MAX_BRIGHTNESS = 225
+MIN_CONTRAST = 20
+MIN_SHARPNESS = 50
 
 # Model paths
 GENDER_PROTO = os.path.join(MODEL_DIR, "gender_deploy.prototxt")
@@ -70,6 +100,193 @@ except ImportError as e:
 _gender_net = None
 _face_cascade = None
 _dnn_net = None
+_model_load_errors = {}
+
+
+# ===============================
+# Validation Functions
+# ===============================
+
+def _validate_image(img: Any) -> Tuple[bool, str]:
+    """
+    Xác thực tính hợp lệ của ảnh đầu vào.
+    
+    Kiểm tra:
+    - Ảnh không None
+    - Có thuộc tính shape hợp lệ
+    - Kích thước tối thiểu
+    - Không chứa giá trị NaN/Inf
+    
+    Returns: (is_valid, error_message)
+    """
+    if img is None:
+        return False, "Image is None"
+    
+    if not hasattr(img, 'shape'):
+        return False, "Invalid image format - no shape attribute"
+    
+    if not hasattr(img, 'size') or img.size == 0:
+        return False, "Image is empty"
+    
+    if len(img.shape) < 2:
+        return False, f"Invalid image dimensions: {len(img.shape)}D, expected 2D or 3D"
+    
+    h, w = img.shape[:2]
+    
+    if h < MIN_IMAGE_SIZE or w < MIN_IMAGE_SIZE:
+        return False, f"Image too small: {w}x{h}, minimum: {MIN_IMAGE_SIZE}x{MIN_IMAGE_SIZE}"
+    
+    # Kiểm tra giá trị hợp lệ
+    if not np.isfinite(img).all():
+        return False, "Image contains invalid values (NaN or Inf)"
+    
+    return True, "OK"
+
+
+def _validate_face_region(x: int, y: int, w: int, h: int, 
+                          img_width: int, img_height: int) -> Tuple[bool, str]:
+    """
+    Xác thực vùng khuôn mặt có hợp lệ không.
+    
+    Returns: (is_valid, error_message)
+    """
+    # Kiểm tra kích thước tối thiểu
+    if w < MIN_FACE_SIZE or h < MIN_FACE_SIZE:
+        return False, f"Face too small: {w}x{h}, minimum: {MIN_FACE_SIZE}x{MIN_FACE_SIZE}"
+    
+    # Kiem tra bounds
+    if x < 0 or y < 0:
+        return False, f"Invalid face position: ({x}, {y})"
+    
+    if x + w > img_width or y + h > img_height:
+        return False, f"Face region exceeds image bounds"
+    
+    # Kiem tra ti le aspect ratio (khuon mat thuong gan vuong)
+    aspect_ratio = w / h if h > 0 else 0
+    if aspect_ratio < 0.5 or aspect_ratio > 2.0:
+        return False, f"Unusual aspect ratio: {aspect_ratio:.2f}"
+    
+    return True, "OK"
+
+
+def _validate_encoding(encoding: List[float]) -> Tuple[bool, str]:
+    """
+    Xác thực face encoding vector.
+    
+    Kiểm tra:
+    - Không rỗng
+    - Đúng độ dài (128 cho dlib)
+    - Giá trị trong khoảng hợp lệ
+    - Không chứa NaN/Inf
+    
+    Returns: (is_valid, error_message)
+    """
+    if not encoding:
+        return False, "Encoding is empty"
+    
+    if not isinstance(encoding, (list, np.ndarray)):
+        return False, f"Invalid encoding type: {type(encoding)}"
+    
+    # Chuyển sang numpy array để kiểm tra
+    try:
+        arr = np.array(encoding, dtype=np.float64)
+    except (ValueError, TypeError) as e:
+        return False, f"Cannot convert encoding to array: {e}"
+    
+    # Kiểm tra độ dài
+    if len(arr) != EXPECTED_ENCODING_LENGTH:
+        # Cho phép fallback encoding (128 elements từ simple method)
+        if len(arr) != 128:
+            return False, f"Invalid encoding length: {len(arr)}, expected {EXPECTED_ENCODING_LENGTH}"
+    
+    # Kiểm tra NaN/Inf
+    if not np.isfinite(arr).all():
+        return False, "Encoding contains NaN or Inf values"
+    
+    # Kiểm tra khoảng giá trị (dlib encoding thường trong [-0.5, 0.5])
+    if np.abs(arr).max() > 2.0:
+        print(f"[WARN] Encoding values may be out of normal range: max={np.abs(arr).max():.4f}")
+    
+    return True, "OK"
+
+
+def _check_image_quality(img: np.ndarray) -> Tuple[float, List[str]]:
+    """
+    Kiểm tra chất lượng ảnh khuôn mặt.
+    
+    Returns: (quality_score 0-1, list of issues)
+    """
+    issues = []
+    quality_score = 1.0
+    
+    # Chuyển sang grayscale nếu cần
+    if len(img.shape) == 3:
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    else:
+        gray = img
+    
+    # 1. Kiem tra do sang
+    mean_brightness = np.mean(gray)
+    if mean_brightness < MIN_BRIGHTNESS:
+        issues.append(f"Too dark (brightness: {mean_brightness:.0f})")
+        quality_score *= 0.7
+    elif mean_brightness > MAX_BRIGHTNESS:
+        issues.append(f"Too bright (brightness: {mean_brightness:.0f})")
+        quality_score *= 0.7
+    
+    # 2. Kiem tra do tuong phan
+    std_contrast = np.std(gray)
+    if std_contrast < MIN_CONTRAST:
+        issues.append(f"Low contrast (std: {std_contrast:.1f})")
+        quality_score *= 0.8
+    
+    # 3. Kiem tra do net (Laplacian variance)
+    laplacian_var = cv2.Laplacian(gray, cv2.CV_64F).var()
+    if laplacian_var < MIN_SHARPNESS:
+        issues.append(f"May be blurry (sharpness: {laplacian_var:.1f})")
+        quality_score *= 0.85
+    
+    # 4. Kiem tra histogram distribution
+    hist = cv2.calcHist([gray], [0], None, [256], [0, 256])
+    hist_std = np.std(hist)
+    if hist_std < 100:
+        issues.append("Poor histogram distribution")
+        quality_score *= 0.9
+    
+    return max(0.0, min(1.0, quality_score)), issues
+
+
+def _sanitize_face_region(x: int, y: int, w: int, h: int, 
+                          img_width: int, img_height: int, 
+                          padding: float = 0.0) -> Tuple[int, int, int, int]:
+    """
+    Điều chỉnh vùng khuôn mặt để đảm bảo hợp lệ.
+    
+    Args:
+        padding: Tỉ lệ mở rộng vùng mặt (0.1 = 10%)
+    
+    Returns: (x, y, w, h) đã điều chỉnh
+    """
+    # Áp dụng padding
+    if padding > 0:
+        pad_w = int(w * padding)
+        pad_h = int(h * padding)
+        x = x - pad_w
+        y = y - pad_h
+        w = w + 2 * pad_w
+        h = h + 2 * pad_h
+    
+    # Clamp vao bounds
+    x = max(0, x)
+    y = max(0, y)
+    w = min(w, img_width - x)
+    h = min(h, img_height - y)
+    
+    # Dam bao kich thuoc toi thieu
+    w = max(MIN_FACE_SIZE, w)
+    h = max(MIN_FACE_SIZE, h)
+    
+    return x, y, w, h
 
 
 def _to_float_list(arr):
@@ -148,11 +365,11 @@ def _predict_gender_deepface(face_img):
             man_score = gender_dict.get('Man', 0)
             
             if woman_score > man_score:
-                return "Nu", woman_score / 100.0
+                return "Nữ", woman_score / 100.0
             else:
                 return "Nam", man_score / 100.0
         else:
-            gender = "Nu" if str(gender_dict).lower() == "woman" else "Nam"
+            gender = "Nữ" if str(gender_dict).lower() == "woman" else "Nam"
             return gender, 0.85
             
     except Exception as e:
@@ -194,7 +411,7 @@ def _predict_gender_caffe(face_img):
         if male_prob > female_prob and male_prob > 0.55:
             return "Nam", male_prob
         elif female_prob > male_prob and female_prob > 0.55:
-            return "Nu", female_prob
+            return "Nữ", female_prob
         else:
             return "Unknown", max(male_prob, female_prob)
             
@@ -203,20 +420,57 @@ def _predict_gender_caffe(face_img):
         return "Unknown", 0.0
 
 
-def predict_gender(face_img):
+def predict_gender(face_img, return_quality_info: bool = False):
     """
-    Predict gender from face image.
-    Returns: (gender_label, confidence)
+    Predict gender from face image with full validation.
+    
+    Args:
+        face_img: BGR face image
+        return_quality_info: If True, return additional quality info
+    
+    Returns: 
+        (gender_label, confidence) 
+        or (gender_label, confidence, quality_info) if return_quality_info=True
     """
-    if face_img is None:
-        return "Unknown", 0.0
+    default_result = ("Unknown", 0.0)
     
-    if not hasattr(face_img, 'shape') or face_img.size == 0:
-        return "Unknown", 0.0
+    # === Validation ===
+    is_valid, error_msg = _validate_image(face_img)
+    if not is_valid:
+        print(f"[WARN] Gender prediction - invalid input: {error_msg}")
+        if return_quality_info:
+            return default_result + ({"error": error_msg},)
+        return default_result
     
+    # === Quality check ===
+    quality_score, quality_issues = _check_image_quality(face_img)
+    quality_info = {
+        "score": quality_score,
+        "issues": quality_issues
+    }
+    
+    if quality_score < 0.5:
+        print(f"[WARN] Low image quality for gender: {quality_issues}")
+    
+    # === Prediction ===
     if USE_DEEPFACE:
-        return _predict_gender_deepface(face_img)
-    return _predict_gender_caffe(face_img)
+        gender, confidence = _predict_gender_deepface(face_img)
+    else:
+        gender, confidence = _predict_gender_caffe(face_img)
+    
+    # Điều chỉnh confidence theo chất lượng ảnh
+    adjusted_confidence = confidence * quality_score
+    
+    # Kiểm tra ngưỡng tin cậy
+    if adjusted_confidence < MIN_GENDER_CONFIDENCE:
+        gender = "Unknown"
+    
+    quality_info["adjusted_confidence"] = adjusted_confidence
+    quality_info["raw_confidence"] = confidence
+    
+    if return_quality_info:
+        return gender, adjusted_confidence, quality_info
+    return gender, adjusted_confidence
 
 
 # ===============================
@@ -348,24 +602,46 @@ def _detect_face_recognition(image):
         return _detect_dnn(image)
 
 
-def detect_faces(image, method="auto"):
+def detect_faces(image, method: str = "auto", 
+                 return_confidence: bool = False,
+                 min_confidence: float = None) -> List:
     """
-    Detect faces in image.
-    Returns: list of (x, y, w, h) tuples
+    Detect faces in image with validation.
+    
+    Args:
+        image: BGR image
+        method: "auto", "face_recognition", "dnn", or "haar"
+        return_confidence: If True, return confidence scores (DNN only)
+        min_confidence: Override minimum confidence threshold
+    
+    Returns: 
+        list of (x, y, w, h) tuples
+        or list of (x, y, w, h, confidence) if return_confidence=True
     """
-    if image is None or not hasattr(image, 'shape'):
+    # === Validation ===
+    is_valid, error_msg = _validate_image(image)
+    if not is_valid:
+        print(f"[WARN] Face detection - invalid input: {error_msg}")
         return []
     
-    if image.size == 0:
-        return []
+    conf_thresh = min_confidence if min_confidence is not None else MIN_DETECTION_CONFIDENCE
     
+    # === Detection ===
     if method == "auto":
         if USE_FACE_RECOGNITION:
             faces = _detect_face_recognition(image)
             if faces:
-                return faces
+                # Validate detected faces
+                validated = []
+                h, w = image.shape[:2]
+                for face in faces:
+                    is_valid, _ = _validate_face_region(face[0], face[1], face[2], face[3], w, h)
+                    if is_valid:
+                        validated.append(face)
+                if validated:
+                    return validated
         
-        faces = _detect_dnn(image)
+        faces = _detect_dnn(image, conf_thresh)
         if faces:
             return faces
         
@@ -374,7 +650,7 @@ def detect_faces(image, method="auto"):
     elif method == "face_recognition":
         return _detect_face_recognition(image)
     elif method == "dnn":
-        return _detect_dnn(image)
+        return _detect_dnn(image, conf_thresh)
     else:
         return _detect_haar(image)
 
@@ -434,42 +710,90 @@ def _encode_simple(face_img):
         return []
 
 
-def encode_face(face_img):
+def encode_face(face_img, validate: bool = True) -> List[float]:
     """
-    Create face encoding from face image.
-    Returns: list of 128 floats
+    Create face encoding from face image with validation.
+    
+    Args:
+        face_img: BGR face image
+        validate: Whether to validate the result
+    
+    Returns: list of 128 floats (empty list if failed)
     """
-    if face_img is None:
+    # === Input validation ===
+    is_valid, error_msg = _validate_image(face_img)
+    if not is_valid:
+        print(f"[WARN] Face encoding - invalid input: {error_msg}")
         return []
     
-    if not hasattr(face_img, 'shape') or face_img.size == 0:
-        return []
+    # === Quality check ===
+    quality_score, quality_issues = _check_image_quality(face_img)
+    if quality_score < 0.4:
+        print(f"[WARN] Low quality image for encoding: {quality_issues}")
     
+    # === Encoding ===
     if USE_FACE_RECOGNITION:
-        return _encode_dlib(face_img)
-    return _encode_simple(face_img)
+        encoding = _encode_dlib(face_img)
+    else:
+        encoding = _encode_simple(face_img)
+    
+    # === Output validation ===
+    if validate and encoding:
+        is_valid, error_msg = _validate_encoding(encoding)
+        if not is_valid:
+            print(f"[WARN] Invalid encoding generated: {error_msg}")
+            return []
+    
+    return encoding
 
 
 # ===============================
 # Face Matching
 # ===============================
 
-def compare_faces(known_enc, test_enc, threshold=0.6):
+def compare_faces(known_enc, test_enc, threshold: float = 0.6, 
+                  validate: bool = True) -> Tuple[bool, float]:
     """
-    Compare two faces using Euclidean distance.
+    Compare two faces using Euclidean distance with validation.
+    
+    Args:
+        known_enc: Known face encoding
+        test_enc: Test face encoding
+        threshold: Match threshold (lower = stricter)
+        validate: Whether to validate encodings
+    
     Returns: (is_match, distance)
     """
-    if not known_enc or not test_enc:
-        return False, 1.0
-    
-    if len(known_enc) != len(test_enc):
-        return False, 1.0
+    # === Validation ===
+    if validate:
+        is_valid, error_msg = _validate_encoding(known_enc)
+        if not is_valid:
+            print(f"[WARN] Invalid known encoding: {error_msg}")
+            return False, 1.0
+        
+        is_valid, error_msg = _validate_encoding(test_enc)
+        if not is_valid:
+            print(f"[WARN] Invalid test encoding: {error_msg}")
+            return False, 1.0
+    else:
+        if not known_enc or not test_enc:
+            return False, 1.0
+        
+        if len(known_enc) != len(test_enc):
+            return False, 1.0
     
     try:
         known = np.array(known_enc, dtype=np.float64)
         test = np.array(test_enc, dtype=np.float64)
         
+        # Tính khoảng cách Euclidean
         distance = float(np.linalg.norm(known - test))
+        
+        # Kiểm tra giá trị hợp lệ
+        if not np.isfinite(distance):
+            print("[WARN] Distance calculation resulted in invalid value")
+            return False, 1.0
+        
         is_match = distance < threshold
         
         return is_match, distance
@@ -479,35 +803,64 @@ def compare_faces(known_enc, test_enc, threshold=0.6):
         return False, 1.0
 
 
-def find_best_match(test_encoding, known_faces, threshold=0.6):
+def find_best_match(test_encoding: List[float], 
+                    known_faces: List[Dict], 
+                    threshold: float = 0.6,
+                    min_confidence: float = None) -> Tuple[Optional[Dict], float]:
     """
-    Find best matching employee for a face.
-    Returns: (matched_employee, confidence)
+    Find best matching employee for a face with validation.
+    
+    Args:
+        test_encoding: Face encoding to match
+        known_faces: List of employee dicts with 'encoding' key
+        threshold: Match threshold
+        min_confidence: Minimum confidence to return a match
+    
+    Returns: (matched_employee or None, confidence)
     """
-    if not test_encoding:
+    # === Validation ===
+    is_valid, error_msg = _validate_encoding(test_encoding)
+    if not is_valid:
+        print(f"[WARN] Invalid test encoding: {error_msg}")
         return None, 0.0
     
     if not known_faces:
         return None, 0.0
     
+    min_conf = min_confidence if min_confidence is not None else MIN_MATCH_CONFIDENCE
+    
     best_match = None
     best_distance = float('inf')
+    valid_comparisons = 0
     
     for employee in known_faces:
         encoding = employee.get('encoding', [])
         
         if not encoding:
             continue
+        
+        # Validate stored encoding
+        is_valid, _ = _validate_encoding(encoding)
+        if not is_valid:
+            print(f"[WARN] Invalid stored encoding for employee: {employee.get('name', 'Unknown')}")
+            continue
+        
         if len(encoding) != len(test_encoding):
             continue
         
-        is_match, distance = compare_faces(encoding, test_encoding, threshold)
+        valid_comparisons += 1
+        is_match, distance = compare_faces(encoding, test_encoding, threshold, validate=False)
         
         if is_match and distance < best_distance:
             best_distance = distance
             best_match = employee
     
+    if valid_comparisons == 0:
+        print("[WARN] No valid encodings found in known_faces")
+        return None, 0.0
+    
     if best_match is not None:
+        # Tính confidence từ distance
         if best_distance <= 0.2:
             confidence = 0.99 - (best_distance * 0.2)
         elif best_distance <= 0.4:
@@ -517,7 +870,11 @@ def find_best_match(test_encoding, known_faces, threshold=0.6):
         else:
             confidence = 0.65 - ((best_distance - 0.5) * 1.5)
         
-        confidence = max(0.50, min(0.99, confidence))
+        confidence = max(min_conf, min(0.99, confidence))
+        
+        # Kiểm tra ngưỡng tin cậy tối thiểu
+        if confidence < min_conf:
+            return None, confidence
         
         return best_match, confidence
     
@@ -561,7 +918,7 @@ def check_models():
     return all_ok
 
 
-def get_system_info():
+def get_system_info() -> Dict[str, Any]:
     """Return face recognition system info"""
     return {
         "face_recognition_available": USE_FACE_RECOGNITION,
@@ -569,7 +926,164 @@ def get_system_info():
         "encoding_method": "dlib 128-d" if USE_FACE_RECOGNITION else "simple histogram",
         "gender_method": "DeepFace CNN" if USE_DEEPFACE else "Caffe model",
         "detection_method": "face_recognition" if USE_FACE_RECOGNITION else "DNN SSD",
+        "model_load_errors": _model_load_errors,
+        "config": {
+            "min_image_size": MIN_IMAGE_SIZE,
+            "min_face_size": MIN_FACE_SIZE,
+            "min_detection_confidence": MIN_DETECTION_CONFIDENCE,
+            "min_gender_confidence": MIN_GENDER_CONFIDENCE,
+            "min_match_confidence": MIN_MATCH_CONFIDENCE,
+            "expected_encoding_length": EXPECTED_ENCODING_LENGTH,
+        }
     }
+
+
+# ===============================
+# Advanced Utility Functions
+# ===============================
+
+def extract_face(image, x: int, y: int, w: int, h: int, 
+                 padding: float = 0.1) -> Optional[np.ndarray]:
+    """
+    Extract face region from image with validation and padding.
+    
+    Args:
+        image: Source BGR image
+        x, y, w, h: Face bounding box
+        padding: Padding ratio around face (0.1 = 10%)
+    
+    Returns: Cropped face image or None if invalid
+    """
+    # Validate input image
+    is_valid, error_msg = _validate_image(image)
+    if not is_valid:
+        print(f"[WARN] extract_face - invalid image: {error_msg}")
+        return None
+    
+    img_h, img_w = image.shape[:2]
+    
+    # Sanitize face region
+    x, y, w, h = _sanitize_face_region(x, y, w, h, img_w, img_h, padding)
+    
+    # Validate face region
+    is_valid, error_msg = _validate_face_region(x, y, w, h, img_w, img_h)
+    if not is_valid:
+        print(f"[WARN] extract_face - invalid region: {error_msg}")
+        return None
+    
+    # Extract face
+    try:
+        face = image[y:y+h, x:x+w].copy()
+        return face
+    except Exception as e:
+        print(f"[ERROR] extract_face failed: {e}")
+        return None
+
+
+def process_face_complete(image, face_box: Tuple[int, int, int, int],
+                          do_gender: bool = True,
+                          do_encoding: bool = True) -> Dict[str, Any]:
+    """
+    Complete face processing pipeline with all validations.
+    
+    Args:
+        image: Source BGR image
+        face_box: (x, y, w, h) face bounding box
+        do_gender: Whether to predict gender
+        do_encoding: Whether to create encoding
+    
+    Returns: Dict with all results and quality info
+    """
+    result = {
+        "success": False,
+        "face_valid": False,
+        "quality": {},
+        "gender": None,
+        "gender_confidence": 0.0,
+        "encoding": [],
+        "errors": []
+    }
+    
+    # Extract face
+    x, y, w, h = face_box
+    face = extract_face(image, x, y, w, h, padding=0.1)
+    
+    if face is None:
+        result["errors"].append("Failed to extract face")
+        return result
+    
+    result["face_valid"] = True
+    
+    # Quality check
+    quality_score, quality_issues = _check_image_quality(face)
+    result["quality"] = {
+        "score": quality_score,
+        "issues": quality_issues
+    }
+    
+    # Gender prediction
+    if do_gender:
+        gender, confidence, quality_info = predict_gender(face, return_quality_info=True)
+        result["gender"] = gender
+        result["gender_confidence"] = confidence
+        result["quality"]["gender_info"] = quality_info
+    
+    # Face encoding
+    if do_encoding:
+        encoding = encode_face(face, validate=True)
+        if encoding:
+            result["encoding"] = encoding
+        else:
+            result["errors"].append("Failed to create encoding")
+    
+    result["success"] = result["face_valid"] and (not do_encoding or bool(result["encoding"]))
+    
+    return result
+
+
+def validate_face_for_registration(face_img) -> Tuple[bool, List[str], Dict]:
+    """
+    Validate a face image is suitable for registration.
+    
+    Stricter validation for registration to ensure high quality encodings.
+    
+    Returns: (is_valid, list of issues, quality_info)
+    """
+    issues = []
+    
+    # Basic validation
+    is_valid, error_msg = _validate_image(face_img)
+    if not is_valid:
+        return False, [error_msg], {}
+    
+    # Size check (stricter for registration)
+    h, w = face_img.shape[:2]
+    if w < 80 or h < 80:
+        issues.append(f"Face too small for registration: {w}x{h}, minimum 80x80")
+    
+    # Quality check (stricter thresholds)
+    quality_score, quality_issues = _check_image_quality(face_img)
+    
+    if quality_score < 0.6:
+        issues.append(f"Image quality too low: {quality_score:.0%}")
+    
+    issues.extend(quality_issues)
+    
+    # Try encoding
+    encoding = encode_face(face_img, validate=True)
+    if not encoding:
+        issues.append("Failed to generate face encoding")
+    
+    quality_info = {
+        "score": quality_score,
+        "issues": quality_issues,
+        "encoding_success": bool(encoding),
+        "encoding_length": len(encoding) if encoding else 0
+    }
+    
+    is_valid = len(issues) == 0
+    
+    return is_valid, issues, quality_info
 
 
 if __name__ == "__main__":
